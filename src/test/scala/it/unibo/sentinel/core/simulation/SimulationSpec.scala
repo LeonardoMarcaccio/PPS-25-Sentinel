@@ -41,7 +41,7 @@ class SimulationSpec extends UnitTest with TestData with EnvironmentFixture:
         snapshot.robots should contain(RobotSnapshot(r1, RobotStatus.Idle, p3))
         val completed = snapshot.missions.find(_.id == m1).value
         completed.status shouldBe MissionStatus.Completed
-        completed.duration shouldBe deadline - 1
+        completed.duration shouldBe deadline.previous
 
     "when all missions are completed" should:
       val sim = Simulation.of(emptyScenario)

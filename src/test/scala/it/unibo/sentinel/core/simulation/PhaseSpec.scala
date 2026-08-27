@@ -120,7 +120,7 @@ class PhaseSpec
         "signal its failure" in:
           val events =
             for
-              _ <- 1 to deadline
+              _ <- 1 to deadline.value
               event <- Phase.expiring(world)
             yield event
 

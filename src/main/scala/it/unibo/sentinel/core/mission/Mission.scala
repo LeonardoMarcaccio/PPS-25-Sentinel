@@ -2,9 +2,7 @@ package it.unibo.sentinel.core.mission
 
 import it.unibo.sentinel.core.robot.RobotId
 import it.unibo.sentinel.core.warehouse.Position
-
-// TODO: Update when the concept of Tick will be introduced
-type Ticks = Int
+import it.unibo.sentinel.core.simulation.Tick
 
 /** Domain context entity representing a mission within the Sentinel system.
   *
@@ -13,7 +11,7 @@ type Ticks = Int
   * @param task
   *   The operational task to be performed within this mission.
   * @param duration
-  *   Remaining mission execution window measured in [[Ticks]].
+  *   Remaining mission execution window measured in [[Tick]].
   * @param status
   *   The current lifecycle state of the mission.
   * @param carrier
@@ -22,11 +20,23 @@ type Ticks = Int
 final case class Mission private (
     id: MissionId,
     task: Task,
-    duration: Ticks,
+    duration: Tick,
     status: MissionStatus,
     carrier: Option[RobotId]
 ):
   import MissionStatus.*
+
+  private def unlessOver(f: => Mission): Mission =
+    if isOver then this else f
+
+  private def whenAssigned(f: => Mission): Mission =
+    if status == Assigned then f else this
+
+  private def terminateAs(s: MissionStatus): Mission =
+    unassign.copy(status = s)
+
+  def currentStep: Option[Step] =
+    if isOver then None else task.currentStep
 
   /** @return
     *   whether the [[Mission]] is currently waiting to be assigned to a
@@ -49,8 +59,7 @@ final case class Mission private (
     *   if it has reached a terminal state.
     */
   def currentDestination: Option[Position] =
-    if isOver then None
-    else Some(task.destination)
+    currentStep.map(_.position)
 
   /** @param robotID
     *   Identifier of the robot assigned to carry out the mission.
@@ -69,49 +78,57 @@ final case class Mission private (
     *   terminal state.
     */
   def unassign: Mission =
-    if isOver then this
-    else copy(carrier = None, status = Pending)
+    unlessOver(copy(carrier = None, status = Pending))
 
   /** @return
-    *   A new completed [[Mission]], or the unchanged [[Mission]] if it is
-    *   already over.
+    *   A new completed [[Mission]], or the unchanged [[Mission]] if it is not
+    *   [[Assigned]] or already over.
     */
   def complete: Mission =
-    if isOver then this else unassign.copy(status = Completed)
+    whenAssigned(terminateAs(Completed))
 
   /** @return
     *   A new failed [[Mission]], or the unchanged [[Mission]] if it is already
     *   over.
     */
   def fail: Mission =
-    if isOver then this else unassign.copy(status = Failed)
+    unlessOver(terminateAs(Failed))
+
+  /** @return
+    *   A new [[Mission]] with the updated task execution state, or the
+    *   unchanged [[Mission]] if it is not [[Assigned]] or already over.
+    */
+  def completeCurrentStep: Mission =
+    whenAssigned:
+      task.advance match
+        case Task.Done => copy(task = Task.Done).complete
+        case next      => copy(task = next)
 
   /** @return
     *   A new [[Mission]] with updated duration, or failed if duration expires.
     *   Returns the unchanged [[Mission]] if it is already over.
     */
   def proceed: Mission =
-    if isOver then this
-    else if duration <= 1 then copy(duration = 0).fail
-    else copy(duration = duration - 1)
+    unlessOver:
+      if duration.value <= 1 then copy(duration = duration.previous).fail
+      else copy(duration = duration.previous)
 
 object Mission:
-  /** Factory method to instantiate a new mission.
-    *
-    * @param id
+
+  /** @param id
     *   The unique identifier for the mission.
     * @param task
     *   The task to be completed.
     * @param duration
-    *   The total time window allocated for the mission, expressed in [[Ticks]].
+    *   The total time window allocated for the mission, expressed in [[Tick]] units.
     * @return
     *   A new [[Mission]] initialized in the unassigned
     *   [[MissionStatus.Pending]] state.
     */
-  def apply(
+  private def apply(
       id: MissionId,
       task: Task,
-      duration: Ticks
+      duration: Tick
   ): Mission = new Mission(
     id,
     task,
@@ -119,3 +136,16 @@ object Mission:
     MissionStatus.Pending,
     None
   )
+
+  /** @param id
+    *   The unique identifier for the mission.
+    * @param destination
+    *   The target [[Position]] to relocate towards.
+    * @param duration
+    *   The total time window allocated for the relocation, expressed in [[Tick]] units.
+    * @return
+    *   A new relocation [[Mission]] initialized in the unassigned
+    *   [[MissionStatus.Pending]] state.
+    */
+  def relocate(id: MissionId, destination: Position, duration: Tick): Mission =
+    Mission(id, Task.move(destination), duration)

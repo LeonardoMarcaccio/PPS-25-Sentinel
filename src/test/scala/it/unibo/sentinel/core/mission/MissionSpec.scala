@@ -2,16 +2,20 @@ package it.unibo.sentinel.core.mission
 
 import it.unibo.sentinel.UnitTest
 import it.unibo.sentinel.core.robot.RobotId
+import it.unibo.sentinel.core.simulation.Tick
 import it.unibo.sentinel.core.warehouse.Position
 
 class MissionSpec extends UnitTest:
 
   val missionID: MissionId = MissionId("M1")
   val target: Position = Position(1, 1)
-  val task: Task = Task.goto(target)
-  val duration: Ticks = 10
+  val duration: Tick = Tick(10)
+  val robotID: RobotId = RobotId("R1")
 
-  val pendingMission: Mission = Mission(missionID, task, duration)
+  def pendingMission: Mission = Mission.relocate(missionID, target, duration)
+  def assignedMission: Mission = pendingMission.assignTo(robotID)
+  def completedMission: Mission = assignedMission.complete
+  def failedMission: Mission = pendingMission.fail
 
   "A Mission" when:
 
@@ -30,83 +34,114 @@ class MissionSpec extends UnitTest:
       "not be considered Over" in:
         pendingMission.isOver shouldBe false
 
-      "have the assigned Task" in:
-        pendingMission.task shouldBe task
+      "have the initial task" in:
+        pendingMission.task shouldBe Task.move(target)
 
       "have the initial Duration" in:
         pendingMission.duration shouldBe duration
 
-      "expose the current destination of its active Step" in:
+      "expose the current Step and Destination" in:
+        pendingMission.currentStep shouldBe Some(Step.Move(target))
         pendingMission.currentDestination shouldBe Some(target)
 
     "managing carrier assignment" should:
-      val robotID = RobotId("R1")
-      val replacerID = RobotId("R2")
-      val assignedMission = pendingMission.assignTo(robotID)
 
-      "set the carrier correctly" in:
+      "set the carrier and status to Assigned" in:
         assignedMission.carrier shouldBe Some(robotID)
-
-      "update the status to Assigned" in:
         assignedMission.status shouldBe MissionStatus.Assigned
+        assignedMission.isPending shouldBe false
+        assignedMission.isOver shouldBe false
 
-      "preserve the current destination when assigned" in:
+      "preserve currentStep and currentDestination when assigned" in:
+        assignedMission.currentStep shouldBe Some(Step.Move(target))
         assignedMission.currentDestination shouldBe Some(target)
 
-      "prevent re-assignment to another robot if already assigned" in:
-        assignedMission.assignTo(replacerID) shouldBe assignedMission
+      "prevent re-assignment if already assigned" in:
+        assignedMission.assignTo(RobotId("R2")) shouldBe assignedMission
 
-      "unset the carrier and revert status to Pending on unassign" in:
+      "unset carrier and revert to Pending on unassign" in:
         val unassigned = assignedMission.unassign
         unassigned.carrier shouldBe None
         unassigned.status shouldBe MissionStatus.Pending
+        unassigned.isPending shouldBe true
 
     "completing its execution" should:
-      val completedMission = pendingMission.complete
 
-      "update the status to Completed" in:
+      "not complete a Pending mission" in:
+        pendingMission.complete shouldBe pendingMission
+
+      "update status to Completed, be Over and hide Step/Destination when Assigned" in:
         completedMission.status shouldBe MissionStatus.Completed
-
-      "be considered Over" in:
         completedMission.isOver shouldBe true
-
-      "return None as currentDestination once Over" in:
+        completedMission.currentStep shouldBe None
         completedMission.currentDestination shouldBe None
 
-      "ignore further assignment attempts" in:
-        completedMission.assignTo(RobotId("R1")) shouldBe completedMission
+      "clear carrier when completing an Assigned mission" in:
+        assignedMission.complete.carrier shouldBe None
+        assignedMission.complete.status shouldBe MissionStatus.Completed
 
-      "ignore unassign attempts" in:
+      "ignore further assignment and unassign attempts when already Completed" in:
+        completedMission.assignTo(robotID) shouldBe completedMission
         completedMission.unassign shouldBe completedMission
+        completedMission.complete shouldBe completedMission
+        completedMission.fail shouldBe completedMission
 
     "failing its execution" should:
-      val failedMission = pendingMission.fail
 
-      "update the status to Failed" in:
+      "update status to Failed, be Over and hide Step/Destination" in:
         failedMission.status shouldBe MissionStatus.Failed
-
-      "be considered Over" in:
         failedMission.isOver shouldBe true
-
-      "return None as currentDestination once Over" in:
+        failedMission.currentStep shouldBe None
         failedMission.currentDestination shouldBe None
 
-    "proceeding through time (Ticks)" should:
+      "clear carrier even when was Assigned" in:
+        assignedMission.fail.carrier shouldBe None
+        assignedMission.fail.status shouldBe MissionStatus.Failed
 
-      "decrease the duration by 1 Tick when active" in:
-        val nextMission = pendingMission.proceed
-        nextMission.duration shouldBe (duration - 1)
+      "ignore further transitions" in:
+        failedMission.fail shouldBe failedMission
+        failedMission.complete shouldBe failedMission
+        failedMission.assignTo(robotID) shouldBe failedMission
 
-      "expire and fail when duration reaches 0" in:
-        val lastTickMission = Mission(MissionId("M_EXP"), task, duration = 1)
-        val expiredMission = lastTickMission.proceed
+    "managing steps" should:
 
-        expiredMission.duration shouldBe 0
-        expiredMission.status shouldBe MissionStatus.Failed
-        expiredMission.isOver shouldBe true
+      "advance, complete and clear carrier when Assigned" in:
+        val stepped = assignedMission.completeCurrentStep
+        stepped.task shouldBe Task.Done
+        stepped.status shouldBe MissionStatus.Completed
+        stepped.isOver shouldBe true
+        stepped.carrier shouldBe None
+        stepped.currentStep shouldBe None
+        stepped.currentDestination shouldBe None
+
+      "do nothing if Pending" in:
+        pendingMission.completeCurrentStep shouldBe pendingMission
+
+      "do nothing if Over" in:
+        completedMission.completeCurrentStep shouldBe completedMission
+        failedMission.completeCurrentStep shouldBe failedMission
+
+    "proceeding through time" should:
+
+      "decrease duration by 1 Tick" in:
+        pendingMission.proceed.duration shouldBe duration.previous
+        assignedMission.proceed.duration shouldBe duration.previous
+        pendingMission.proceed.task shouldBe pendingMission.task
+
+      "expire and fail, clearing carrier if Assigned" in:
+        val lastTickPending = Mission.relocate(MissionId("M_EXP"), target, Tick(1))
+        val expiredPending = lastTickPending.proceed
+        expiredPending.duration shouldBe Tick(0)
+        expiredPending.status shouldBe MissionStatus.Failed
+        expiredPending.isOver shouldBe true
+        expiredPending.currentDestination shouldBe None
+
+        val lastTickAssigned = Mission.relocate(MissionId("M_EXP2"), target, Tick(1)).assignTo(robotID)
+        val expiredAssigned = lastTickAssigned.proceed
+        expiredAssigned.duration shouldBe Tick(0)
+        expiredAssigned.status shouldBe MissionStatus.Failed
+        expiredAssigned.carrier shouldBe None
 
       "not decrease duration or change status if already Over" in:
-        val completedMission = pendingMission.complete
-        val proceedAfterOver = completedMission.proceed
-
-        proceedAfterOver shouldBe completedMission
+        completedMission.proceed shouldBe completedMission
+        failedMission.proceed shouldBe failedMission

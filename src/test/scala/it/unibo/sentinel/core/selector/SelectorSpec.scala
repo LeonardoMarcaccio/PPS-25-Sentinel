@@ -4,7 +4,8 @@ import org.mockito.Mockito
 import org.mockito.Mockito.*
 import it.unibo.sentinel.UnitTest
 import it.unibo.sentinel.core.mission.*
-import it.unibo.sentinel.core.robot.Robot
+import it.unibo.sentinel.core.robot.{Robot, RobotId}
+import it.unibo.sentinel.core.simulation.Tick
 import it.unibo.sentinel.core.warehouse.Position
 import it.unibo.sentinel.core.assignment.*
 import it.unibo.sentinel.core.routing.Navigator
@@ -16,10 +17,10 @@ trait SelectorBehaviors:
   this: UnitTest =>
 
   def commonSelector(selectorBuilder: => Selector): Unit =
-    val mission = Mission(
-      MissionId("M01"),
-      Task.goto(Position(0, 0)),
-      10
+    val mission = Mission.relocate(
+      id = MissionId("M01"),
+      destination = Position(0, 0),
+      duration = Tick(10)
     )
 
     "asked to assign a mission" should:
@@ -51,7 +52,11 @@ class SelectorSpec extends UnitTest with SelectorBehaviors:
 
   val targetPosition = Position(0, 0)
   val mission =
-    Mission(MissionId("M01"), Task.goto(targetPosition), 10)
+    Mission.relocate(
+      id = MissionId("M01"),
+      destination = targetPosition, 
+      duration = Tick(10)
+    )
 
   "A Nearest Selector" when:
     val robot1 = Mockito.mock(classOf[Robot])
@@ -82,7 +87,7 @@ class SelectorSpec extends UnitTest with SelectorBehaviors:
         result shouldBe Some(placement1)
 
       "ignore when the mission has no destination" in:
-        val completedMission = mission.complete
+        val completedMission = mission.assignTo(RobotId("R0")).complete
 
         selector.choose(completedMission, placements) shouldBe None
 

@@ -1,11 +1,12 @@
 package it.unibo.sentinel.boundary.launcher
 
 import it.unibo.sentinel.core.warehouse.{Warehouse, Area, Tile, Position}
-import it.unibo.sentinel.core.mission.{Mission, MissionId, Task}
+import it.unibo.sentinel.core.mission.{Mission, MissionId}
 import it.unibo.sentinel.core.robot.RobotId
 import it.unibo.sentinel.core.scenario.Scenario
 import it.unibo.sentinel.core.scenario.Spawn
 import it.unibo.sentinel.core.scenario.Validation
+import it.unibo.sentinel.core.simulation.Tick
 
 /** Contains default values for a test simulation
   */
@@ -37,7 +38,7 @@ trait Dataset:
     *   a list of [[Mission]]s with each [[MissionStatus]]
     */
   protected def mission: Mission =
-    Mission(MissionId("M1"), Task.goto(Position(5, 5)), 10)
+    Mission.relocate(MissionId("M1"), Position(5, 5), Tick(10))
 
   protected def scenario: Scenario =
     val withRobot = extractScenario:
