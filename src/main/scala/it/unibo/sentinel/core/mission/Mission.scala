@@ -120,7 +120,8 @@ object Mission:
     * @param task
     *   The task to be completed.
     * @param duration
-    *   The total time window allocated for the mission, expressed in [[Tick]] units.
+    *   The total time window allocated for the mission, expressed in [[Tick]]
+    *   units.
     * @return
     *   A new [[Mission]] initialized in the unassigned
     *   [[MissionStatus.Pending]] state.
@@ -142,7 +143,8 @@ object Mission:
     * @param destination
     *   The target [[Position]] to relocate towards.
     * @param duration
-    *   The total time window allocated for the relocation, expressed in [[Tick]] units.
+    *   The total time window allocated for the relocation, expressed in
+    *   [[Tick]] units.
     * @return
     *   A new relocation [[Mission]] initialized in the unassigned
     *   [[MissionStatus.Pending]] state.

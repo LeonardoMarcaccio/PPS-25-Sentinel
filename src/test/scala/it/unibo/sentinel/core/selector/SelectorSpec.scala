@@ -54,7 +54,7 @@ class SelectorSpec extends UnitTest with SelectorBehaviors:
   val mission =
     Mission.relocate(
       id = MissionId("M01"),
-      destination = targetPosition, 
+      destination = targetPosition,
       duration = Tick(10)
     )
 

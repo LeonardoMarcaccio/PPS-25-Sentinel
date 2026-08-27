@@ -129,14 +129,17 @@ class MissionSpec extends UnitTest:
         pendingMission.proceed.task shouldBe pendingMission.task
 
       "expire and fail, clearing carrier if Assigned" in:
-        val lastTickPending = Mission.relocate(MissionId("M_EXP"), target, Tick(1))
+        val lastTickPending =
+          Mission.relocate(MissionId("M_EXP"), target, Tick(1))
         val expiredPending = lastTickPending.proceed
         expiredPending.duration shouldBe Tick(0)
         expiredPending.status shouldBe MissionStatus.Failed
         expiredPending.isOver shouldBe true
         expiredPending.currentDestination shouldBe None
 
-        val lastTickAssigned = Mission.relocate(MissionId("M_EXP2"), target, Tick(1)).assignTo(robotID)
+        val lastTickAssigned = Mission
+          .relocate(MissionId("M_EXP2"), target, Tick(1))
+          .assignTo(robotID)
         val expiredAssigned = lastTickAssigned.proceed
         expiredAssigned.duration shouldBe Tick(0)
         expiredAssigned.status shouldBe MissionStatus.Failed
