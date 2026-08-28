@@ -38,8 +38,8 @@ final case class Mission private (
   /** Retrieves the current action of the mission's task.
     *
     * @return
-    *   An [[Action]] if the mission is active, or [[None]]
-    *   if it has reached a terminal state.
+    *   An [[Action]] if the mission is active, or [[None]] if it has reached a
+    *   terminal state.
     */
   def currentAction: Option[Action] =
     if isOver then None else task.currentAction
@@ -61,8 +61,8 @@ final case class Mission private (
   /** Retrieves the target position of the current action.
     *
     * @return
-    *   A [[Position]] if the mission is active, or [[None]]
-    *   if it has reached a terminal state.
+    *   A [[Position]] if the mission is active, or [[None]] if it has reached a
+    *   terminal state.
     */
   def currentTarget: Option[Position] =
     currentAction.map(_.position)

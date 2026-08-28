@@ -8,7 +8,7 @@ enum Task:
 
   def currentAction: Option[Action] = this match
     case Single(action) => Some(action)
-    case Done         => None
+    case Done           => None
 
   def advance: Task = this match
     case Single(_) => Done

@@ -9,7 +9,6 @@ import org.scalatest.BeforeAndAfterEach
 
 import scala.compiletime.uninitialized
 
-
 /*
  * We suppressed null warning due to the ScalaTest lifecycle `uninitialized` var usage in beforeEach.
  */

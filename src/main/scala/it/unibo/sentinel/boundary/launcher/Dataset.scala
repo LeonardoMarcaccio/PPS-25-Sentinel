@@ -40,8 +40,12 @@ trait Dataset:
       s4 <- s3.load(Mission.relocate(MissionId("M1"), Position(6, 6), Tick(10)))
       s5 <- s4.load(Mission.relocate(MissionId("M2"), Position(6, 6), Tick(10)))
       s6 <- s5.load(Mission.relocate(MissionId("M3"), Position(6, 6), Tick(10)))
-      s7 <- s6.load(Mission.relocate(MissionId("M4"), Position(18, 1), Tick(20)))
-      s8 <- s7.load(Mission.relocate(MissionId("M5"), Position(1, 18), Tick(20)))
+      s7 <- s6.load(
+        Mission.relocate(MissionId("M4"), Position(18, 1), Tick(20))
+      )
+      s8 <- s7.load(
+        Mission.relocate(MissionId("M5"), Position(1, 18), Tick(20))
+      )
     yield s8) match
       case Left(_)      => sys.exit(1)
       case Right(value) => value
