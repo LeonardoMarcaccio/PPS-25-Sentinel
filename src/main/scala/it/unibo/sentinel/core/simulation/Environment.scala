@@ -112,7 +112,7 @@ private[core] final class Environment private[core] (
       robot = spot.robot
     yield
       robot.follow(path)
-      Event.RobotRouted(r_id, path)
+      Event.RobotRouted(r_id, path.positions)
 
   /** @param r_id
     * @return
@@ -124,6 +124,7 @@ private[core] final class Environment private[core] (
       robot = spot.robot
       from = spot.at
       to <- robot.next
+      if robot.remaining == Tick.zero
     yield
       if !fleet.values.exists(_.at == to)
       then
@@ -153,12 +154,12 @@ private[core] final class Environment private[core] (
     *   the sequence of generated [[Event]]s (e.g. mission failures)
     */
   def tick(): Seq[Event] =
+    placements.foreach(_.robot.tick())
     val events = for
-      mission <- missions
+      mission <- missions.filterNot(_.isOver)
       next = mission.proceed
     yield
       board += (mission.id -> next)
-
       if next.status == MissionStatus.Failed then
         releaseCarrier(mission)
         Some(Event.MissionFailed(mission.id))
