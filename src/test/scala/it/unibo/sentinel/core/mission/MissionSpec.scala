@@ -38,11 +38,11 @@ class MissionSpec extends UnitTest:
         pendingMission.task shouldBe Task.move(target)
 
       "have the initial Duration" in:
-        pendingMission.duration shouldBe duration
+        pendingMission.deadline shouldBe duration
 
-      "expose the current Step and Destination" in:
-        pendingMission.currentStep shouldBe Some(Step.Move(target))
-        pendingMission.currentDestination shouldBe Some(target)
+      "expose the current Action and Target" in:
+        pendingMission.currentAction shouldBe Some(Action.Move(target))
+        pendingMission.currentTarget shouldBe Some(target)
 
     "managing carrier assignment" should:
 
@@ -52,9 +52,9 @@ class MissionSpec extends UnitTest:
         assignedMission.isPending shouldBe false
         assignedMission.isOver shouldBe false
 
-      "preserve currentStep and currentDestination when assigned" in:
-        assignedMission.currentStep shouldBe Some(Step.Move(target))
-        assignedMission.currentDestination shouldBe Some(target)
+      "preserve currentAction and currentTarget when assigned" in:
+        assignedMission.currentAction shouldBe Some(Action.Move(target))
+        assignedMission.currentTarget shouldBe Some(target)
 
       "prevent re-assignment if already assigned" in:
         assignedMission.assignTo(RobotId("R2")) shouldBe assignedMission
@@ -70,17 +70,17 @@ class MissionSpec extends UnitTest:
       "not complete a Pending mission" in:
         pendingMission.complete shouldBe pendingMission
 
-      "update status to Completed, be Over and hide Step/Destination when Assigned" in:
+      "update status to Completed, be Over and hide Action/Target when Assigned" in:
         completedMission.status shouldBe MissionStatus.Completed
         completedMission.isOver shouldBe true
-        completedMission.currentStep shouldBe None
-        completedMission.currentDestination shouldBe None
+        completedMission.currentAction shouldBe None
+        completedMission.currentTarget shouldBe None
 
       "clear carrier when completing an Assigned mission" in:
         assignedMission.complete.carrier shouldBe None
         assignedMission.complete.status shouldBe MissionStatus.Completed
 
-      "ignore further assignment and unassign attempts when already Completed" in:
+      "ignore further transitions" in:
         completedMission.assignTo(robotID) shouldBe completedMission
         completedMission.unassign shouldBe completedMission
         completedMission.complete shouldBe completedMission
@@ -88,13 +88,13 @@ class MissionSpec extends UnitTest:
 
     "failing its execution" should:
 
-      "update status to Failed, be Over and hide Step/Destination" in:
+      "update status to Failed, be Over and hide Action/Target" in:
         failedMission.status shouldBe MissionStatus.Failed
         failedMission.isOver shouldBe true
-        failedMission.currentStep shouldBe None
-        failedMission.currentDestination shouldBe None
+        failedMission.currentAction shouldBe None
+        failedMission.currentTarget shouldBe None
 
-      "clear carrier even when was Assigned" in:
+      "clear carrier" in:
         assignedMission.fail.carrier shouldBe None
         assignedMission.fail.status shouldBe MissionStatus.Failed
 
@@ -103,48 +103,48 @@ class MissionSpec extends UnitTest:
         failedMission.complete shouldBe failedMission
         failedMission.assignTo(robotID) shouldBe failedMission
 
-    "managing steps" should:
+    "managing actions" should:
 
       "advance, complete and clear carrier when Assigned" in:
-        val stepped = assignedMission.completeCurrentStep
-        stepped.task shouldBe Task.Done
-        stepped.status shouldBe MissionStatus.Completed
-        stepped.isOver shouldBe true
-        stepped.carrier shouldBe None
-        stepped.currentStep shouldBe None
-        stepped.currentDestination shouldBe None
+        val done = assignedMission.completeCurrentAction
+        done.task shouldBe Task.Done
+        done.status shouldBe MissionStatus.Completed
+        done.isOver shouldBe true
+        done.carrier shouldBe None
+        done.currentAction shouldBe None
+        done.currentTarget shouldBe None
 
       "do nothing if Pending" in:
-        pendingMission.completeCurrentStep shouldBe pendingMission
+        pendingMission.completeCurrentAction shouldBe pendingMission
 
       "do nothing if Over" in:
-        completedMission.completeCurrentStep shouldBe completedMission
-        failedMission.completeCurrentStep shouldBe failedMission
+        completedMission.completeCurrentAction shouldBe completedMission
+        failedMission.completeCurrentAction shouldBe failedMission
 
     "proceeding through time" should:
 
       "decrease duration by 1 Tick" in:
-        pendingMission.proceed.duration shouldBe duration.previous
-        assignedMission.proceed.duration shouldBe duration.previous
-        pendingMission.proceed.task shouldBe pendingMission.task
+        pendingMission.tick.deadline shouldBe duration.previous
+        assignedMission.tick.deadline shouldBe duration.previous
+        pendingMission.tick.task shouldBe pendingMission.task
 
       "expire and fail, clearing carrier if Assigned" in:
         val lastTickPending =
           Mission.relocate(MissionId("M_EXP"), target, Tick(1))
-        val expiredPending = lastTickPending.proceed
-        expiredPending.duration shouldBe Tick(0)
+        val expiredPending = lastTickPending.tick
+        expiredPending.deadline shouldBe Tick(0)
         expiredPending.status shouldBe MissionStatus.Failed
         expiredPending.isOver shouldBe true
-        expiredPending.currentDestination shouldBe None
+        expiredPending.currentTarget shouldBe None
 
         val lastTickAssigned = Mission
           .relocate(MissionId("M_EXP2"), target, Tick(1))
           .assignTo(robotID)
-        val expiredAssigned = lastTickAssigned.proceed
-        expiredAssigned.duration shouldBe Tick(0)
+        val expiredAssigned = lastTickAssigned.tick
+        expiredAssigned.deadline shouldBe Tick(0)
         expiredAssigned.status shouldBe MissionStatus.Failed
         expiredAssigned.carrier shouldBe None
 
-      "not decrease duration or change status if already Over" in:
-        completedMission.proceed shouldBe completedMission
-        failedMission.proceed shouldBe failedMission
+      "not decrease duration or change action if already Over" in:
+        completedMission.tick shouldBe completedMission
+        failedMission.tick shouldBe failedMission

@@ -10,7 +10,7 @@ import it.unibo.sentinel.core.simulation.Tick
   *   Unique identifier of the mission.
   * @param task
   *   The operational task to be performed within this mission.
-  * @param duration
+  * @param deadline
   *   Remaining mission execution window measured in [[Tick]].
   * @param status
   *   The current lifecycle state of the mission.
@@ -20,7 +20,7 @@ import it.unibo.sentinel.core.simulation.Tick
 final case class Mission private (
     id: MissionId,
     task: Task,
-    duration: Tick,
+    deadline: Tick,
     status: MissionStatus,
     carrier: Option[RobotId]
 ):
@@ -35,8 +35,14 @@ final case class Mission private (
   private def terminateAs(s: MissionStatus): Mission =
     unassign.copy(status = s)
 
-  def currentStep: Option[Step] =
-    if isOver then None else task.currentStep
+  /** Retrieves the current action of the mission's task.
+    *
+    * @return
+    *   An [[Action]] if the mission is active, or [[None]]
+    *   if it has reached a terminal state.
+    */
+  def currentAction: Option[Action] =
+    if isOver then None else task.currentAction
 
   /** @return
     *   whether the [[Mission]] is currently waiting to be assigned to a
@@ -52,14 +58,14 @@ final case class Mission private (
     case Completed | Failed => true
     case _                  => false
 
-  /** Retrieves the target position of the current step.
+  /** Retrieves the target position of the current action.
     *
     * @return
-    *   [[Some]] destination [[Position]] if the mission is active, or [[None]]
+    *   A [[Position]] if the mission is active, or [[None]]
     *   if it has reached a terminal state.
     */
-  def currentDestination: Option[Position] =
-    currentStep.map(_.position)
+  def currentTarget: Option[Position] =
+    currentAction.map(_.position)
 
   /** @param robotID
     *   Identifier of the robot assigned to carry out the mission.
@@ -98,7 +104,7 @@ final case class Mission private (
     *   A new [[Mission]] with the updated task execution state, or the
     *   unchanged [[Mission]] if it is not [[Assigned]] or already over.
     */
-  def completeCurrentStep: Mission =
+  def completeCurrentAction: Mission =
     whenAssigned:
       task.advance match
         case Task.Done => copy(task = Task.Done).complete
@@ -108,10 +114,10 @@ final case class Mission private (
     *   A new [[Mission]] with updated duration, or failed if duration expires.
     *   Returns the unchanged [[Mission]] if it is already over.
     */
-  def proceed: Mission =
+  def tick: Mission =
     unlessOver:
-      if duration.value <= 1 then copy(duration = duration.previous).fail
-      else copy(duration = duration.previous)
+      if deadline.value <= 1 then copy(deadline = deadline.previous).fail
+      else copy(deadline = deadline.previous)
 
 object Mission:
 
@@ -129,11 +135,11 @@ object Mission:
   private def apply(
       id: MissionId,
       task: Task,
-      duration: Tick
+      deadline: Tick
   ): Mission = new Mission(
     id,
     task,
-    duration,
+    deadline,
     MissionStatus.Pending,
     None
   )

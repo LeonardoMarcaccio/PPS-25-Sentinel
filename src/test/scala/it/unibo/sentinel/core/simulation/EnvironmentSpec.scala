@@ -1,14 +1,14 @@
 package it.unibo.sentinel.core.simulation
 
 import it.unibo.sentinel.UnitTest
-import it.unibo.sentinel.core.mission.{MissionId, MissionStatus}
+import it.unibo.sentinel.core.mission.{Mission, MissionId, MissionStatus}
 import it.unibo.sentinel.core.robot.{RobotId, RobotStatus}
-import it.unibo.sentinel.core.routing.Path
+import it.unibo.sentinel.core.routing.{Path, Step}
 import it.unibo.sentinel.core.warehouse.Position
 import org.scalatest.BeforeAndAfterEach
 
 import scala.compiletime.uninitialized
-import it.unibo.sentinel.core.mission.Mission
+
 
 /*
  * We suppressed null warning due to the ScalaTest lifecycle `uninitialized` var usage in beforeEach.

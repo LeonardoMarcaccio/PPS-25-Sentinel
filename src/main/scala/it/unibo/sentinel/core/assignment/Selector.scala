@@ -64,6 +64,6 @@ object Selector:
     ): Option[Placement] =
       (for
         candidate <- available
-        target <- mission.currentDestination
+        target <- mission.currentTarget
         distance <- navigator.distance(candidate.at, target)
       yield candidate -> distance).minByOption(_._2).map(_._1)

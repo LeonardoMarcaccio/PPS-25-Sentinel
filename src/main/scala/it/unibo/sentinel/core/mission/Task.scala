@@ -10,8 +10,6 @@ enum Task:
     case Single(action) => Some(action)
     case Done         => None
 
-  def currentLocation: Option[Position] = currentAction.map(_.position)
-
   def advance: Task = this match
     case Single(_) => Done
     case Done      => Done
