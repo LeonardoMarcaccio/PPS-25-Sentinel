@@ -70,7 +70,7 @@ class SelectorSpec extends UnitTest with SelectorBehaviors:
     val placements = Iterable(placement1, placement2)
 
     val navigator = Mockito.mock(classOf[Navigator])
-    val destination = mission.currentDestination.value
+    val destination = mission.currentTarget.value
 
     when(navigator.distance(placement1.at, destination)).thenReturn(Some(2))
     when(navigator.distance(placement2.at, destination)).thenReturn(Some(4))
