@@ -39,13 +39,41 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
   hgrow = Priority.Always
   vgrow = Priority.Always
 
-  private val traversableBg = new Background(Array(new BackgroundFill(Color.web("#F8FAFC"), CornerRadii.Empty, Insets.Empty)))
-  private val obstacleBg = new Background(Array(new BackgroundFill(Color.web("#334155"), CornerRadii.Empty, Insets.Empty)))
+  private val traversableBg = new Background(
+    Array(
+      new BackgroundFill(Color.web("#F8FAFC"), CornerRadii.Empty, Insets.Empty)
+    )
+  )
+  private val obstacleBg = new Background(
+    Array(
+      new BackgroundFill(Color.web("#334155"), CornerRadii.Empty, Insets.Empty)
+    )
+  )
 
-  private val traversableBorder = new Border(new BorderStroke(Color.web("#E0E6ED"), BorderStrokeStyle.Solid, CornerRadii.Empty, new BorderWidths(1)))
-  private val obstacleBorder = new Border(new BorderStroke(Color.web("#1C2739"), BorderStrokeStyle.Solid, CornerRadii.Empty, new BorderWidths(1)))
-  private val robotBorder = new Border(new BorderStroke(Color.web("#0F172A"), BorderStrokeStyle.Solid, CornerRadii.Empty, new BorderWidths(2)))
-
+  private val traversableBorder = new Border(
+    new BorderStroke(
+      Color.web("#E0E6ED"),
+      BorderStrokeStyle.Solid,
+      CornerRadii.Empty,
+      new BorderWidths(1)
+    )
+  )
+  private val obstacleBorder = new Border(
+    new BorderStroke(
+      Color.web("#1C2739"),
+      BorderStrokeStyle.Solid,
+      CornerRadii.Empty,
+      new BorderWidths(1)
+    )
+  )
+  private val robotBorder = new Border(
+    new BorderStroke(
+      Color.web("#0F172A"),
+      BorderStrokeStyle.Solid,
+      CornerRadii.Empty,
+      new BorderWidths(2)
+    )
+  )
 
   private val cells: Map[Position, (StackPane, Label)] = (
     for
@@ -88,7 +116,7 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
     dirtyCells.clear()
 
     // PASS 1: Render paths with transparency
-    for 
+    for
       robot <- robots
       path <- robot.path
     do
@@ -114,10 +142,17 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
   private def showPath(path: Path, color: Color): Unit =
     for pos <- path.positions do
       cells.get(pos).foreach { (pane, _) =>
-        applyStyle(pane, warehouse.isTraversable(pos), customBgColor = Some(color))
+        applyStyle(
+          pane,
+          warehouse.isTraversable(pos),
+          customBgColor = Some(color)
+        )
       }
 
-  private def createCellNode(pos: Position, traversable: Boolean): (StackPane, Label) =
+  private def createCellNode(
+      pos: Position,
+      traversable: Boolean
+  ): (StackPane, Label) =
     val textColor = if traversable then "#0F172A" else "#F8FAFC"
     val robotLabel = new Label:
       textFill = Color.web(textColor)
@@ -130,12 +165,12 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
       val costLabel = new Label:
         text = costText
         textFill = Color.web("#262c35")
-        style = "-fx-font-size: 9px; -fx-font-weight: normal; -fx-padding: 0 3px 1px 0;"
+        style =
+          "-fx-font-size: 9px; -fx-font-weight: normal; -fx-padding: 0 3px 1px 0;"
 
       StackPane.setAlignment(costLabel, Pos.BottomRight)
       pane.children = Seq(costLabel, robotLabel)
-    else
-      pane.children = Seq(robotLabel)
+    else pane.children = Seq(robotLabel)
 
     applyStyle(pane, traversable)
     (pane, robotLabel)
@@ -147,7 +182,12 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
       isRobotTile: Boolean = false
   ): Unit =
     pane.background = customBgColor match
-      case Some(color) => new Background(Array(new BackgroundFill(color, CornerRadii.Empty, Insets.Empty)))
-      case None        => if traversable then traversableBg else obstacleBg
+      case Some(color) =>
+        new Background(
+          Array(new BackgroundFill(color, CornerRadii.Empty, Insets.Empty))
+        )
+      case None => if traversable then traversableBg else obstacleBg
 
-    pane.border = if isRobotTile then robotBorder else if traversable then traversableBorder else obstacleBorder
+    pane.border = if isRobotTile then robotBorder
+    else if traversable then traversableBorder
+    else obstacleBorder
