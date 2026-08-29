@@ -5,6 +5,7 @@ import it.unibo.sentinel.core.warehouse.Position
 import it.unibo.sentinel.core.warehouse.Warehouse
 import it.unibo.sentinel.core.mission.Mission
 import it.unibo.sentinel.core.robot.RobotStatus
+import it.unibo.sentinel.core.routing.Path
 
 /** Represents the state of a robot at a given time in the simulation.
   *
@@ -18,7 +19,8 @@ import it.unibo.sentinel.core.robot.RobotStatus
 final case class RobotSnapshot(
     id: RobotId,
     status: RobotStatus,
-    position: Position
+    position: Position,
+    path: Option[Path]
 )
 
 /** Represents a snapshot of the simulation at a given time.

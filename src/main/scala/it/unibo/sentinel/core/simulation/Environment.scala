@@ -208,7 +208,7 @@ private[core] final class Environment private[core] (
   def snapshot: Snapshot = Snapshot(
     warehouse = warehouse,
     robots = placements.map(spot =>
-      RobotSnapshot(spot.robot.id, spot.robot.status, spot.at)
+      RobotSnapshot(spot.robot.id, spot.robot.status, spot.at, spot.robot.path)
     ),
     missions = missions
   )
