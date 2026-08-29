@@ -25,12 +25,12 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
 
   private val rows: Int = warehouse.height
   private val cols: Int = warehouse.width
+  private val robotColors: mutable.Map[String, Color] = mutable.Map.empty
 
   alignment = Pos.Center
   hgrow = Priority.Always
   vgrow = Priority.Always
 
-  private val robotColors: mutable.Map[String, Color] = mutable.Map.empty
 
   private val cells: Map[Position, (StackPane, Label)] = (
     for
@@ -38,7 +38,7 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
       c <- 0 until cols
       pos = Position(c, r)
     yield
-      val (node, label) = createCellNode(warehouse.isTraversable(pos))
+      val (node, label) = createCellNode(pos, warehouse.isTraversable(pos))
       add(node, c, r)
       pos -> (node, label)
   ).toMap
@@ -54,7 +54,6 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
       percentHeight = 100.0 / rows
   }
 
-  /** Dynamically generates and caches a distinct color when a new robot ID is seen */
   private def colorForRobot(robotId: String): Color =
     robotColors.getOrElseUpdate(
       robotId, {
@@ -65,7 +64,6 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
 
   /** Updates the robots and their paths in the grid */
   def updateRobots(robots: Seq[RobotSnapshot]): Unit =
-    // Reset background and text for all grid cells
     cells.values.foreach((_, label) => label.text = "")
     for (pos, (pane, _)) <- cells do
       applyStyle(pane, warehouse.isTraversable(pos))
@@ -90,25 +88,34 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
         )
       }
 
-  /** Paints path cells with the specified style */
-  def showPath(path: Path, cssColor: String): Unit =
+  private def showPath(path: Path, cssColor: String): Unit =
     for pos <- path.positions do
       cells.get(pos).foreach { (pane, _) =>
         applyStyle(pane, warehouse.isTraversable(pos), customBgColor = Some(cssColor))
       }
 
-  private def createCellNode(traversable: Boolean): (StackPane, Label) =
+  private def createCellNode(pos: Position, traversable: Boolean): (StackPane, Label) =
     val textColor = if traversable then "#0F172A" else "#F8FAFC"
-
-    val label = new Label:
+    val robotLabel = new Label:
       textFill = Color.web(textColor)
       style = "-fx-font-weight: bold; -fx-font-size: 12px;"
 
-    val pane = new StackPane:
-      children = Seq(label)
+    val pane = new StackPane
+
+    if traversable then
+      val costText = warehouse.traversalCost(pos).map(_.toString).getOrElse("")
+      val costLabel = new Label:
+        text = costText
+        textFill = Color.web("#262c35")
+        style = "-fx-font-size: 9px; -fx-font-weight: normal; -fx-padding: 0 3px 1px 0;"
+
+      StackPane.setAlignment(costLabel, Pos.BottomRight)
+      pane.children = Seq(costLabel, robotLabel)
+    else
+      pane.children = Seq(robotLabel)
 
     applyStyle(pane, traversable)
-    (pane, label)
+    (pane, robotLabel)
 
   private def applyStyle(
       pane: StackPane,
