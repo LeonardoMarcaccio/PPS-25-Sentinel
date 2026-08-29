@@ -39,10 +39,10 @@ trait SimulationBehaviours extends TestData with EnvironmentFixture:
 
       "return a snapshot of the environment after the step" in:
         val sim = build(scenario)
-        
+
         val step1 = sim.step()
         val snapshot1 = step1.snapshot
-        
+
         val robotInStep1 = snapshot1.robots.find(_.id == r1).value
         robotInStep1.status shouldBe RobotStatus.Moving
         robotInStep1.position shouldBe p1
@@ -50,7 +50,7 @@ trait SimulationBehaviours extends TestData with EnvironmentFixture:
 
         val step2 = sim.step()
         val snapshot2 = step2.snapshot
-        
+
         val robotInStep2 = snapshot2.robots.find(_.id == r1).value
         robotInStep2.status shouldBe RobotStatus.Idle
         robotInStep2.position shouldBe p3
