@@ -8,7 +8,8 @@ import it.unibo.sentinel.core.simulation.Tick
 
 class CycleSelectorSpec extends UnitTest with SelectorBehaviors:
 
-  private val mission = Mission.relocate(MissionId("M01"), Position(0, 0), Tick(10))
+  private val mission =
+    Mission.relocate(MissionId("M01"), Position(0, 0), Tick(10))
 
   private def createCandidates(): (Placement, Placement, Placement) =
     (
