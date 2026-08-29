@@ -1,10 +1,17 @@
 package it.unibo.sentinel.boundary.gui.fx.panels
 
 import it.unibo.sentinel.core.warehouse.{Position, Warehouse}
-import scalafx.geometry.Pos
+import scalafx.geometry.{Insets, Pos}
 import scalafx.scene.control.Label
 import scalafx.scene.layout.{
+  Background,
+  BackgroundFill,
+  Border,
+  BorderStroke,
+  BorderStrokeStyle,
+  BorderWidths,
   ColumnConstraints,
+  CornerRadii,
   GridPane,
   Priority,
   RowConstraints,
@@ -26,10 +33,18 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
   private val rows: Int = warehouse.height
   private val cols: Int = warehouse.width
   private val robotColors: mutable.Map[String, Color] = mutable.Map.empty
+  private val dirtyCells: mutable.Set[Position] = mutable.Set.empty
 
   alignment = Pos.Center
   hgrow = Priority.Always
   vgrow = Priority.Always
+
+  private val traversableBg = new Background(Array(new BackgroundFill(Color.web("#F8FAFC"), CornerRadii.Empty, Insets.Empty)))
+  private val obstacleBg = new Background(Array(new BackgroundFill(Color.web("#334155"), CornerRadii.Empty, Insets.Empty)))
+
+  private val traversableBorder = new Border(new BorderStroke(Color.web("#E0E6ED"), BorderStrokeStyle.Solid, CornerRadii.Empty, new BorderWidths(1)))
+  private val obstacleBorder = new Border(new BorderStroke(Color.web("#1C2739"), BorderStrokeStyle.Solid, CornerRadii.Empty, new BorderWidths(1)))
+  private val robotBorder = new Border(new BorderStroke(Color.web("#0F172A"), BorderStrokeStyle.Solid, CornerRadii.Empty, new BorderWidths(2)))
 
 
   private val cells: Map[Position, (StackPane, Label)] = (
@@ -64,16 +79,23 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
 
   /** Updates the robots and their paths in the grid */
   def updateRobots(robots: Seq[RobotSnapshot]): Unit =
-    cells.values.foreach((_, label) => label.text = "")
-    for (pos, (pane, _)) <- cells do
-      applyStyle(pane, warehouse.isTraversable(pos))
+    // 1. Reset only the cells that were changed in the previous frame
+    for pos <- dirtyCells do
+      cells.get(pos).foreach { (pane, label) =>
+        label.text = ""
+        applyStyle(pane, warehouse.isTraversable(pos))
+      }
+    dirtyCells.clear()
 
     // PASS 1: Render paths with transparency
-    for robot <- robots do
+    for 
+      robot <- robots
+      path <- robot.path
+    do
       val color = colorForRobot(robot.id.value)
-      robot.path match
-        case Some(path) => showPath(path, toRgba(color, alpha = 0.35))
-        case None       => ()
+      val pathColor = Color.color(color.red, color.green, color.blue, 0.35)
+      showPath(path, pathColor)
+      dirtyCells ++= path.positions
 
     // PASS 2: Render robot standing positions on top of paths
     for robot <- robots do
@@ -83,15 +105,16 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
         applyStyle(
           pane,
           warehouse.isTraversable(robot.position),
-          customBgColor = Some(toRgba(color, alpha = 1.0)),
+          customBgColor = Some(color),
           isRobotTile = true
         )
+        dirtyCells += robot.position
       }
 
-  private def showPath(path: Path, cssColor: String): Unit =
+  private def showPath(path: Path, color: Color): Unit =
     for pos <- path.positions do
       cells.get(pos).foreach { (pane, _) =>
-        applyStyle(pane, warehouse.isTraversable(pos), customBgColor = Some(cssColor))
+        applyStyle(pane, warehouse.isTraversable(pos), customBgColor = Some(color))
       }
 
   private def createCellNode(pos: Position, traversable: Boolean): (StackPane, Label) =
@@ -120,21 +143,11 @@ final class WarehousePanel(warehouse: Warehouse) extends GridPane:
   private def applyStyle(
       pane: StackPane,
       traversable: Boolean,
-      customBgColor: Option[String] = None,
+      customBgColor: Option[Color] = None,
       isRobotTile: Boolean = false
   ): Unit =
-    val bgColor = customBgColor.getOrElse {
-      if traversable then "#F8FAFC" else "#334155"
-    }
+    pane.background = customBgColor match
+      case Some(color) => new Background(Array(new BackgroundFill(color, CornerRadii.Empty, Insets.Empty)))
+      case None        => if traversable then traversableBg else obstacleBg
 
-    val borderColor = if isRobotTile then "#0F172A" else if traversable then "#E0E6ED" else "#1C2739"
-    val borderWidth = if isRobotTile then "2px" else "1px"
-
-    pane.style = s"""
-      -fx-background-color: $bgColor;
-      -fx-border-color: $borderColor;
-      -fx-border-width: $borderWidth;
-    """
-
-  private def toRgba(c: Color, alpha: Double): String =
-    s"rgba(${(c.red * 255).toInt}, ${(c.green * 255).toInt}, ${(c.blue * 255).toInt}, $alpha)"
+    pane.border = if isRobotTile then robotBorder else if traversable then traversableBorder else obstacleBorder
