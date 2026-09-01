@@ -7,6 +7,23 @@ import it.unibo.sentinel.core.simulation.Tick
 sealed trait Tile
 
 object Tile:
-  /** Represents a floor tile.
+  /** A tile that can be walked on, parameterized by traversal cost in Ticks.
     */
-  case class Floor(cost: Tick = Tick.unit) extends Tile
+  trait Walkable extends Tile:
+    def cost: Tick
+
+  /** A tile that can store items.
+    */
+  trait Storage extends Tile
+
+  /** Represents a Floor tile.
+    */
+  case class Floor(override val cost: Tick = Tick.unit) extends Walkable
+
+  /** Represents a storage Shelf.
+    */
+  case class Shelf() extends Storage
+
+  /** Represents a Loading, which is both walkable and used for storage.
+    */
+  case class LoadingBay(override val cost: Tick = Tick.unit) extends Walkable with Storage

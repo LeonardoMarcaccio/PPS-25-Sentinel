@@ -131,3 +131,56 @@ class WarehouseSpec extends UnitTest with WarehouseFixture:
       "be empty when no neighbor holds a tile" in:
         val position = Position(1, 1)
         w0.traversableNeighbors(position) shouldBe empty
+
+    "a shelf is added" should:
+
+      "expose that shelf at the given position" in:
+        val pos = Position(1, 1)
+        val w1 = w0.withTile(pos)(Tile.Shelf())
+        w1.tileAt(pos) shouldBe Some(Tile.Shelf())
+
+      "not be traversable" in:
+        val pos = Position(1, 1)
+        val w1 = w0.withTile(pos)(Tile.Shelf())
+        w1.isTraversable(pos) shouldBe false
+        w1.traversalCost(pos) shouldBe None
+
+      "be storable" in:
+        val pos = Position(2, 2)
+        val w1 = w0.withTile(pos)(Tile.Shelf())
+        w1.canStore(pos) shouldBe true
+
+    "a loading bay is added" should:
+
+      "expose that loading bay at the given position" in:
+        val pos = Position(1, 2)
+        val w1 = w0.withTile(pos)(Tile.LoadingBay())
+        w1.tileAt(pos) shouldBe Some(Tile.LoadingBay())
+
+      "be both traversable and storable" in:
+        val pos = Position(1, 2)
+        val w1 = w0.withTile(pos)(Tile.LoadingBay(Tick(3)))
+        w1.isTraversable(pos) shouldBe true
+        w1.canStore(pos) shouldBe true
+        w1.traversalCost(pos) shouldBe Some(Tick(3))
+
+      "have default cost Tick.unit when not specified" in:
+        val pos = Position(0, 0)
+        val w1 = w0.withTile(pos)(Tile.LoadingBay())
+        w1.traversalCost(pos) shouldBe Some(Tick.unit)
+        w1.isTraversable(pos) shouldBe true
+
+    "asked whether a position can store" should:
+
+      "answer negatively on an empty position" in:
+        w0.canStore(Position(0, 0)) shouldBe false
+
+      "answer negatively on a floor tile" in:
+        val pos = Position(1, 1)
+        val w1 = w0.withTile(pos)(Tile.Floor())
+        w1.canStore(pos) shouldBe false
+
+      "answer positively on a storage tile" in:
+        val pos = Position(1, 1)
+        val w1 = w0.withTile(pos)(Tile.Shelf())
+        w1.canStore(pos) shouldBe true

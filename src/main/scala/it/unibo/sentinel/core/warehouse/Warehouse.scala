@@ -80,7 +80,17 @@ trait Warehouse:
     */
   def isTraversable(position: Position): Boolean =
     tileAt(position) match
-      case Some(Tile.Floor(_)) => true
+      case Some(_: Tile.Walkable) => true
+      case _                   => false
+
+  /** @param position
+    *   the position to check.
+    * @return
+    *   whether [[position]] is a storage.
+    */
+  def canStore(position: Position): Boolean =
+    tileAt(position) match
+      case Some(_: Tile.Storage) => true
       case _                   => false
 
   /** @param position
@@ -98,7 +108,7 @@ trait Warehouse:
     */
   def traversalCost(position: Position): Option[Tick] =
     tileAt(position) match
-      case Some(Tile.Floor(cost)) => Some(cost)
+      case Some(tile: Tile.Walkable) => Some(tile.cost)
       case _                      => None
 
   /** @param position
