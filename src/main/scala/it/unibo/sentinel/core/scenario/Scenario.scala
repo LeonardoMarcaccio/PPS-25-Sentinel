@@ -3,6 +3,7 @@ package it.unibo.sentinel.core.scenario
 import it.unibo.sentinel.core.warehouse.{Warehouse, Position}
 import it.unibo.sentinel.core.robot.{Robot, RobotId}
 import it.unibo.sentinel.core.mission.{Mission, MissionId}
+import it.unibo.sentinel.core.item.{ItemId, StoredItem}
 import it.unibo.sentinel.core.scenario.Policies.Routing
 import it.unibo.sentinel.core.scenario.Policies.Assignment
 import it.unibo.sentinel.core.simulation.Environment
@@ -74,6 +75,16 @@ enum Validation:
     */
   case MissionAlreadyExists(id: MissionId)
 
+  /** @param id
+    *   the [[ItemId]] of the [[Item]] that already exists.
+    */
+  case ItemAlreadyExists(id: ItemId)
+
+  /** @param position
+    *   the [[Position]] that is not a storage tile.
+    */
+  case NotStorageTile(position: Position)
+
 /** Represents the dynamic context of the environment to simulate.
   */
 trait Scenario:
@@ -144,6 +155,11 @@ trait Scenario:
     */
   def missions: Seq[Mission]
 
+  /** @return
+    *   the [[StoredItem]]s of the [[Scenario]].
+    */
+  def items: Seq[StoredItem]
+
   /** @param spawn
     *   the [[Spawn]] to place in the [[Scenario]].
     * @return
@@ -159,6 +175,14 @@ trait Scenario:
     *   valid, or a [[Validation]] error otherwise.
     */
   def load(mission: Mission): Either[Validation, Scenario]
+
+  /** @param storedItem
+    *   the [[StoredItem]] to place in the [[Scenario]].
+    * @return
+    *   an [[Either]] containing the updated [[Scenario]] if the placement is
+    *   valid, or a [[Validation]] error otherwise.
+    */
+  def placeItem(storedItem: StoredItem): Either[Validation, Scenario]
 
   /** Builds and initializes the simulation [[Environment]] from this
     * [[Scenario]].
@@ -183,6 +207,7 @@ object Scenario:
       warehouse,
       Seq.empty,
       Seq.empty,
+      Seq.empty,
       Routing.Distance,
       Assignment.Nearest,
       CollisionSelection.Random,
@@ -193,6 +218,7 @@ object Scenario:
       warehouse: Warehouse,
       spawns: Seq[Spawn],
       missions: Seq[Mission],
+      items: Seq[StoredItem],
       routing: Policies.Routing,
       assignment: Policies.Assignment,
       collisionSelection: Policies.CollisionSelection,
@@ -203,7 +229,8 @@ object Scenario:
       Environment(
         warehouse = warehouse,
         fleet = ListMap(spawns.map(s => s.id -> s.toPlacement)*),
-        board = ListMap(missions.map(m => m.id -> m)*)
+        board = ListMap(missions.map(m => m.id -> m)*),
+        stock = ListMap(items.map(si => si.item.id -> si)*)
       )
 
     override def place(spawn: Spawn): Either[Validation, Scenario] =
@@ -228,6 +255,22 @@ object Scenario:
           MissionAlreadyExists(mission.id)
         )
       yield copy(missions = missions :+ mission)
+
+    override def placeItem(storedItem: StoredItem): Either[Validation, Scenario] =
+      for
+        _ <- ensure(
+          warehouse.canStore(storedItem.at),
+          NotStorageTile(storedItem.at)
+        )
+        _ <- ensure(
+          !items.exists(_.item.id == storedItem.item.id),
+          ItemAlreadyExists(storedItem.item.id)
+        )
+        _ <- ensure(
+          !items.exists(_.at == storedItem.at),
+          PositionOccupied(storedItem.at)
+        )
+      yield copy(items = items :+ storedItem)
 
     override def withRouting(routing: Routing): Scenario =
       copy(routing = routing)

@@ -4,7 +4,9 @@ import it.unibo.sentinel.UnitTest
 import it.unibo.sentinel.core.mission.{Mission, MissionId, MissionStatus}
 import it.unibo.sentinel.core.robot.{RobotId, RobotStatus}
 import it.unibo.sentinel.core.routing.{Path, Step}
-import it.unibo.sentinel.core.warehouse.Position
+import it.unibo.sentinel.core.warehouse.{Position, Tile}
+import it.unibo.sentinel.core.item.{Item, ItemId, ItemWeight, StoredItem}
+import it.unibo.sentinel.core.scenario.Scenario
 import org.scalatest.BeforeAndAfterEach
 
 import scala.compiletime.uninitialized
@@ -241,6 +243,37 @@ class EnvironmentSpec
         place.at shouldBe p1
 
         environment.placement(RobotId("UNKNOWN")) shouldBe None
+
+    "queried about Items" should:
+
+      "return all stored items" in:
+        val wh = environment.warehouse.withTile(Position(2, 2))(Tile.Shelf())
+        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
+        val sc = Scenario.in(wh).placeItem(stored).value
+        val env = sc.build
+        env.items.should(contain only stored)
+
+      "return item by id if it exists" in:
+        val wh = environment.warehouse.withTile(Position(2, 2))(Tile.Shelf())
+        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
+        val env = Scenario.in(wh).placeItem(stored).value.build
+        env.item(ItemId("I1")).value.shouldBe(stored)
+        env.item(ItemId("UNKNOWN")).shouldBe(None)
+
+      "return items at a given position" in:
+        val wh = environment.warehouse
+          .withTile(Position(2, 2))(Tile.Shelf())
+          .withTile(Position(2, 3))(Tile.Shelf())
+        val s1 = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
+        val s2 = StoredItem(Item(ItemId("I2"), ItemWeight(3)), Position(2, 3))
+        val env = (for
+          sc0 <- Right(Scenario.in(wh))
+          sc1 <- sc0.placeItem(s1)
+          sc2 <- sc1.placeItem(s2)
+        yield sc2).value.build
+        env.itemsAt(Position(2, 2)).should(contain only s1)
+        env.itemsAt(Position(2, 3)).should(contain only s2)
+        env.itemsAt(Position(9, 9)).shouldBe(empty)
 
     "ended" should:
 

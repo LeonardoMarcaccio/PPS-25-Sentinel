@@ -4,6 +4,7 @@ import it.unibo.sentinel.UnitTest
 import it.unibo.sentinel.core.warehouse.{Warehouse, Position, Area, Tile}
 import it.unibo.sentinel.core.robot.RobotId
 import it.unibo.sentinel.core.mission.{Mission, MissionId}
+import it.unibo.sentinel.core.item.{Item, ItemId, ItemWeight, StoredItem}
 import it.unibo.sentinel.core.simulation.Tick
 import org.mockito.Mockito
 
@@ -94,6 +95,45 @@ class ScenarioSpec extends UnitTest:
           yield s2
         result.left.value shouldBe MissionAlreadyExists(mission.id)
 
+    "place an item" should:
+
+      "return a new scenario with the item placed" in:
+        val wh = warehouse.withTile(Position(2, 2))(Tile.Shelf())
+        val s = Scenario.in(wh)
+        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
+        val result = s.placeItem(stored).value
+        result.items should contain only stored
+
+      "signal that the position is not a storage tile" in:
+        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(1, 1))
+        val result = s0.placeItem(stored)
+        result.left.value shouldBe NotStorageTile(Position(1, 1))
+
+      "signal that the item id already exists" in:
+        val wh = warehouse.withTile(Position(2, 2))(Tile.Shelf())
+        val s = Scenario.in(wh)
+        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
+        val result =
+          for
+            s1 <- s.placeItem(stored)
+            s2 <- s1.placeItem(stored)
+          yield s2
+        result.left.value shouldBe ItemAlreadyExists(ItemId("I1"))
+
+      "signal that the storage position is already occupied" in:
+        val wh = warehouse
+          .withTile(Position(2, 2))(Tile.Shelf())
+          .withTile(Position(2, 3))(Tile.Shelf())
+        val s = Scenario.in(wh)
+        val s1 = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
+        val s2 = StoredItem(Item(ItemId("I2"), ItemWeight(3)), Position(2, 2))
+        val result =
+          for
+            sc1 <- s.placeItem(s1)
+            sc2 <- sc1.placeItem(s2)
+          yield sc2
+        result.left.value shouldBe PositionOccupied(Position(2, 2))
+
     "change the routing policy" should:
 
       "return a new scenario with the routing policy changed" in:
@@ -124,25 +164,32 @@ class ScenarioSpec extends UnitTest:
 
     "build an environment" should:
 
-      "produce an Environment containing the warehouse, placed robots, and loaded missions" in:
+      "produce a complete Environment containing warehouse, robots, missions and stored items" in:
+        val wh = warehouse
+          .withTile(Position(1, 1))(Tile.Floor())
+          .withTile(Position(2, 2))(Tile.Shelf())
+        val s = Scenario.in(wh)
         val robotId = RobotId("R1")
-        val position = Position(1, 1)
-        val spawn = Spawn(id = robotId, at = position)
+        val spawn = Spawn(id = robotId, at = Position(1, 1))
         val mission = Mission.relocate(
           id = MissionId("M1"),
-          destination = position,
+          destination = Position(1, 1),
           duration = Tick(10)
         )
+        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
 
         val scenario = (for
-          s1 <- s0.place(spawn)
-          s2 <- s1.load(mission)
-        yield s2).value
+          sc1 <- s.place(spawn)
+          sc2 <- sc1.load(mission)
+          sc3 <- sc2.placeItem(stored)
+        yield sc3).value
 
         val env = scenario.build
 
-        env.warehouse shouldBe warehouse
+        env.warehouse shouldBe wh
         env.missions should contain only mission
-        env.placements.map(p =>
-          (p.robot.id, p.at)
-        ) should contain only (robotId -> position)
+        env.placements.map(p => (p.robot.id, p.at)) should contain only (robotId -> Position(1, 1))
+        env.items should contain only stored
+        env.item(ItemId("I1")).value shouldBe stored
+        env.itemsAt(Position(2, 2)) should contain only stored
+        env.itemsAt(Position(1, 1)) shouldBe empty

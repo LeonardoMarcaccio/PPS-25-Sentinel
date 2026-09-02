@@ -4,6 +4,7 @@ import it.unibo.sentinel.core.robot.{Robot, RobotId}
 import it.unibo.sentinel.core.scenario.Placement
 import it.unibo.sentinel.core.warehouse.Warehouse
 import it.unibo.sentinel.core.mission.{Mission, MissionId, MissionStatus}
+import it.unibo.sentinel.core.item.{ItemId, StoredItem}
 import it.unibo.sentinel.core.routing.Path
 import it.unibo.sentinel.core.robot.RobotStatus
 
@@ -58,8 +59,28 @@ trait Queries:
   def pendingMissions: Seq[Mission] =
     missions.filter(_.status == MissionStatus.Pending)
 
+  /** @return
+    *   all [[StoredItem]]s present in the simulation.
+    */
+  def items: Seq[StoredItem]
+
+  /** @param itemId
+    *   the [[ItemId]] of the item to query
+    * @return
+    *   the [[StoredItem]] with the given id, if any.
+    */
+  def item(itemId: ItemId): Option[StoredItem]
+
+  /** @param position
+    *   the [[Position]] to query
+    * @return
+    *   the [[StoredItem]]s at the given position.
+    */
+  def itemsAt(position: it.unibo.sentinel.core.warehouse.Position): Seq[StoredItem] =
+    items.filter(_.at == position)
+
 /** Represents the mutable simulation state, maintaining the [[Warehouse]]
-  * layout, the robot [[fleet]], and the mission [[board]].
+  * layout, the robot [[fleet]], the mission [[board]] and the item [[stock]].
   *
   * @param warehouse
   *   the [[Warehouse]] where the simulation takes place.
@@ -67,21 +88,28 @@ trait Queries:
   *   the map of current [[Placement]]s indexed by [[RobotId]].
   * @param board
   *   the map of active [[Mission]]s indexed by [[MissionId]].
+  * @param stock
+  *   the map of stored [[StoredItem]]s indexed by [[ItemId]].
   */
 private[core] final class Environment private[core] (
     val warehouse: Warehouse,
     private var fleet: Map[RobotId, Placement],
-    private var board: Map[MissionId, Mission]
+    private var board: Map[MissionId, Mission],
+    private val stock: Map[ItemId, StoredItem]
 ) extends Queries:
 
   override def placements: Seq[Placement] = fleet.values.toSeq
   override def missions: Seq[Mission] = board.values.toSeq
+  override def items: Seq[StoredItem] = stock.values.toSeq
 
   override def robot(r_id: RobotId): Option[Robot] =
     fleet.get(r_id).map(_.robot)
 
   override def mission(m_id: MissionId): Option[Mission] =
     board.get(m_id)
+
+  override def item(itemId: ItemId): Option[StoredItem] =
+    stock.get(itemId)
 
   override def placement(r_id: RobotId): Option[Placement] =
     fleet.get(r_id)
