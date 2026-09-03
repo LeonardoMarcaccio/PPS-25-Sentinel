@@ -51,7 +51,7 @@ final case class Spawn(id: RobotId, at: Position):
   /** @return
     *   the [[Placement]] of the [[Robot]] to spawn in the [[Warehouse]].
     */
-  def toPlacement: Placement = Placement(Robot(id), at)
+  def toPlacement: Placement = Placement(Robot.drone(id), at)
 
 /** */
 enum Validation:

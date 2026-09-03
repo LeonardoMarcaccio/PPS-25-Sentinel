@@ -8,11 +8,11 @@ trait SelectionPolicyFixture:
   self: UnitTest =>
 
   val robots: Seq[Robot] = Seq(
-    Robot(RobotId("R1")),
-    Robot(RobotId("R2")),
-    Robot(RobotId("R3")),
-    Robot(RobotId("R4")),
-    Robot(RobotId("R5"))
+    Robot.drone(RobotId("R1")),
+    Robot.drone(RobotId("R2")),
+    Robot.drone(RobotId("R3")),
+    Robot.drone(RobotId("R4")),
+    Robot.drone(RobotId("R5"))
   )
 
 class SelectionPolicySpec extends UnitTest with SelectionPolicyFixture:

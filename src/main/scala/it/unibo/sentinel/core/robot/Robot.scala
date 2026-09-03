@@ -4,6 +4,7 @@ import it.unibo.sentinel.core.mission.MissionId
 import it.unibo.sentinel.core.routing.Path
 import it.unibo.sentinel.core.warehouse.Position
 import it.unibo.sentinel.core.simulation.Tick
+import scala.collection.immutable.Queue
 
 /** Abstracts the concept of a robot, which is an entity capable of accepting
   * and executing missions while moving through the [[Warehouse]]
@@ -80,53 +81,69 @@ trait Robot:
     */
   def tick(): Unit
 
+/** [[Robot]] capable of accepting multiple [[Mission]]s using a queue.
+  *
+  * @param capacity
+  *   max number of [[Mission]]s that the [[Robot]] can accept.
+  */
+trait Queued(capacity: Int) extends Robot:
+
+  private var backlog: Queue[MissionId] = Queue.empty
+
+  abstract override def canAccept: Boolean =
+    backlog.size < capacity && super.canAccept
+
+  override def accept(mission: MissionId): Unit =
+    if canAccept then backlog = backlog :+ mission
+
+  override def mission: Option[MissionId] = backlog.headOption
+
+  abstract override def release(): Unit =
+    backlog = backlog match
+      case _ +: tail => tail
+      case _         => Queue.empty
+    super.release()
+
 object Robot:
   /** @param id
     *   the robot's identifier
     * @return
     *   a new robot with the given id, no missions and idle status
     */
-  def apply(id: RobotId): Robot = new SimpleRobot(id)
+  def drone(id: RobotId, capacity: Int = 1): Robot = new Drone(id)
+    with Queued(capacity)
 
   /** Implementation of a [[Robot]] that can accept one mission
     */
-  private class SimpleRobot(val id: RobotId) extends Robot:
+  private abstract class Drone(val id: RobotId) extends Robot:
 
-    private var _waiting: Boolean = false
-    private var currentMission: Option[MissionId] = None
+    private var waiting: Boolean = false
     private var currentPath: Option[Path] = None
 
-    override def mission: Option[MissionId] = currentMission
-
     override def status: RobotStatus =
-      if _waiting then RobotStatus.Waiting
+      if waiting then RobotStatus.Waiting
       else
-        (currentMission, currentPath) match
+        (mission, currentPath) match
           case (None, None)    => RobotStatus.Idle
           case (Some(_), None) => RobotStatus.Ready
           case (_, Some(_))    => RobotStatus.Moving
 
-    override def canAccept: Boolean = mission.isEmpty
-
-    override def accept(missionId: MissionId): Unit =
-      if canAccept then currentMission = Some(missionId)
+    override def canAccept: Boolean = true
 
     override def release(): Unit =
-      currentMission = None
       currentPath = None
 
     override def path: Option[Path] = currentPath
 
-    override def follow(path: Path): Unit =
-      currentPath = Some(path)
+    override def follow(path: Path): Unit = currentPath = Some(path)
 
     override def next: Option[Position] =
       currentPath.flatMap(_.positions.headOption)
 
     override def pause(): Unit =
-      if status == RobotStatus.Moving then _waiting = true
+      if status == RobotStatus.Moving then waiting = true
 
-    override def resume(): Unit = _waiting = false
+    override def resume(): Unit = waiting = false
 
     override def step(): Unit =
       currentPath = currentPath.map(_.advanced)
