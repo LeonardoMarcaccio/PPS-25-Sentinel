@@ -1,6 +1,7 @@
 package it.unibo.sentinel.core.warehouse
 
 import it.unibo.sentinel.UnitTest
+import it.unibo.sentinel.core.item.Item
 import it.unibo.sentinel.core.simulation.Tick
 
 trait WarehouseFixture:
@@ -136,19 +137,21 @@ class WarehouseSpec extends UnitTest with WarehouseFixture:
 
       "expose that shelf at the given position" in:
         val pos = Position(1, 1)
-        val w1 = w0.withTile(pos)(Tile.Shelf())
-        w1.tileAt(pos) shouldBe Some(Tile.Shelf())
+        val w1 = w0.withTile(pos)(Tile.Shelf(Item.Computer))
+        w1.tileAt(pos) shouldBe Some(Tile.Shelf(Item.Computer))
 
       "not be traversable" in:
         val pos = Position(1, 1)
-        val w1 = w0.withTile(pos)(Tile.Shelf())
+        val w1 = w0.withTile(pos)(Tile.Shelf(Item.Computer))
         w1.isTraversable(pos) shouldBe false
         w1.traversalCost(pos) shouldBe None
 
-      "be storable" in:
+      "be recognized as shelf, interactable but not loading bay" in:
         val pos = Position(2, 2)
-        val w1 = w0.withTile(pos)(Tile.Shelf())
-        w1.canStore(pos) shouldBe true
+        val w1 = w0.withTile(pos)(Tile.Shelf(Item.Table))
+        w1.isShelf(pos) shouldBe true
+        w1.isLoadingBay(pos) shouldBe false
+        w1.isInteractable(pos) shouldBe true
 
     "a loading bay is added" should:
 
@@ -157,11 +160,13 @@ class WarehouseSpec extends UnitTest with WarehouseFixture:
         val w1 = w0.withTile(pos)(Tile.LoadingBay())
         w1.tileAt(pos) shouldBe Some(Tile.LoadingBay())
 
-      "be both traversable and storable" in:
+      "be both traversable and interactable" in:
         val pos = Position(1, 2)
         val w1 = w0.withTile(pos)(Tile.LoadingBay(Tick(3)))
         w1.isTraversable(pos) shouldBe true
-        w1.canStore(pos) shouldBe true
+        w1.isInteractable(pos) shouldBe true
+        w1.isLoadingBay(pos) shouldBe true
+        w1.isShelf(pos) shouldBe false
         w1.traversalCost(pos) shouldBe Some(Tick(3))
 
       "have default cost Tick.unit when not specified" in:
@@ -170,17 +175,25 @@ class WarehouseSpec extends UnitTest with WarehouseFixture:
         w1.traversalCost(pos) shouldBe Some(Tick.unit)
         w1.isTraversable(pos) shouldBe true
 
-    "asked whether a position can store" should:
+    "asked whether a position is shelf or loading bay" should:
 
       "answer negatively on an empty position" in:
-        w0.canStore(Position(0, 0)) shouldBe false
+        w0.isShelf(Position(0, 0)) shouldBe false
+        w0.isLoadingBay(Position(0, 0)) shouldBe false
+        w0.isInteractable(Position(0, 0)) shouldBe false
 
       "answer negatively on a floor tile" in:
         val pos = Position(1, 1)
         val w1 = w0.withTile(pos)(Tile.Floor())
-        w1.canStore(pos) shouldBe false
+        w1.isShelf(pos) shouldBe false
+        w1.isLoadingBay(pos) shouldBe false
+        w1.isInteractable(pos) shouldBe false
 
-      "answer positively on a storage tile" in:
-        val pos = Position(1, 1)
-        val w1 = w0.withTile(pos)(Tile.Shelf())
-        w1.canStore(pos) shouldBe true
+      "answer positively on matching tiles" in:
+        val shelfPos = Position(1, 1)
+        val bayPos = Position(2, 2)
+        val w1 = w0
+          .withTile(shelfPos)(Tile.Shelf(Item.Fridge))
+          .withTile(bayPos)(Tile.LoadingBay())
+        w1.isShelf(shelfPos) shouldBe true
+        w1.isLoadingBay(bayPos) shouldBe true

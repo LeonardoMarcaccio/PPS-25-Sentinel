@@ -1,29 +1,36 @@
 package it.unibo.sentinel.core.warehouse
 
 import it.unibo.sentinel.core.simulation.Tick
+import it.unibo.sentinel.core.item.Item
 
 /** Represents a tile in the warehouse.
   */
 sealed trait Tile
 
 object Tile:
-  /** A tile that can be walked on, parameterized by traversal cost in Ticks.
-    */
   trait Walkable extends Tile:
     def cost: Tick
 
-  /** A tile that can store items.
-    */
-  trait Storage extends Tile
+  trait Interactable extends Tile:
+    def interactiveOffset(using Adjacency): Seq[Position]
 
-  /** Represents a Floor tile.
+  /** Represents a floor tile.
     */
-  case class Floor(override val cost: Tick = Tick.unit) extends Walkable
+  case class Floor(cost: Tick = Tick.unit) extends Tile with Walkable
 
-  /** Represents a storage Shelf.
+  /** A non-traversable tile that can store one object and can be interacted
+    * with from an adjacent traversable tile.
     */
-  case class Shelf() extends Storage
+  case class Shelf(item: Item) extends Tile with Interactable:
+    override def interactiveOffset(using strategy: Adjacency): Seq[Position] =
+      strategy.around(Position(0, 0))
 
-  /** Represents a Loading, which is both walkable and used for storage.
+  /** A traversable tile that can store one object and can be interacted with
+    * while standing on it.
     */
-  case class LoadingBay(override val cost: Tick = Tick.unit) extends Walkable with Storage
+  case class LoadingBay(cost: Tick = Tick.unit)
+      extends Tile
+      with Walkable
+      with Interactable:
+    override def interactiveOffset(using strategy: Adjacency): Seq[Position] =
+      Seq(Position(0, 0))

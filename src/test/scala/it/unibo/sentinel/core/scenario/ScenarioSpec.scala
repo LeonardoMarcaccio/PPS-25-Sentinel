@@ -4,7 +4,7 @@ import it.unibo.sentinel.UnitTest
 import it.unibo.sentinel.core.warehouse.{Warehouse, Position, Area, Tile}
 import it.unibo.sentinel.core.robot.RobotId
 import it.unibo.sentinel.core.mission.{Mission, MissionId}
-import it.unibo.sentinel.core.item.{Item, ItemId, ItemWeight, StoredItem}
+import it.unibo.sentinel.core.item.Item
 import it.unibo.sentinel.core.simulation.Tick
 import org.mockito.Mockito
 
@@ -95,44 +95,70 @@ class ScenarioSpec extends UnitTest:
           yield s2
         result.left.value shouldBe MissionAlreadyExists(mission.id)
 
-    "place an item" should:
+    "load a deliver mission" should:
+      val shelfPos = Position(2, 2)
+      val bayPos = Position(3, 3)
+      val floorPos = Position(1, 1)
+      def warehouseWith(shelfItem: Item): Warehouse =
+        warehouse
+          .withTile(shelfPos)(Tile.Shelf(shelfItem))
+          .withTile(bayPos)(Tile.LoadingBay())
 
-      "return a new scenario with the item placed" in:
-        val wh = warehouse.withTile(Position(2, 2))(Tile.Shelf())
-        val s = Scenario.in(wh)
-        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
-        val result = s.placeItem(stored).value
-        result.items should contain only stored
+      "accept it when shelf holds the item and drop is a loading bay" in:
+        val s = Scenario.in(warehouseWith(Item.Computer))
+        val mission = Mission.deliver(
+          id = MissionId("M1"),
+          item = Item.Computer,
+          from = shelfPos,
+          to = bayPos,
+          duration = Tick(10)
+        )
+        val result = s.load(mission).value
+        result.missions should contain only mission
 
-      "signal that the position is not a storage tile" in:
-        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(1, 1))
-        val result = s0.placeItem(stored)
-        result.left.value shouldBe NotStorageTile(Position(1, 1))
+      "signal NotShelfTile when picking from a non Shelf tile" in:
+        val s = Scenario.in(warehouseWith(Item.Computer))
+        val mission = Mission.deliver(
+          id = MissionId("M1"),
+          item = Item.Computer,
+          from = floorPos,
+          to = bayPos,
+          duration = Tick(10)
+        )
+        s.load(mission).left.value shouldBe NotShelfTile(floorPos)
 
-      "signal that the item id already exists" in:
-        val wh = warehouse.withTile(Position(2, 2))(Tile.Shelf())
-        val s = Scenario.in(wh)
-        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
-        val result =
-          for
-            s1 <- s.placeItem(stored)
-            s2 <- s1.placeItem(stored)
-          yield s2
-        result.left.value shouldBe ItemAlreadyExists(ItemId("I1"))
+      "signal ItemMismatch when the shelf holds a different item" in:
+        val s = Scenario.in(warehouseWith(Item.Table))
+        val mission = Mission.deliver(
+          id = MissionId("M1"),
+          item = Item.Computer,
+          from = shelfPos,
+          to = bayPos,
+          duration = Tick(10)
+        )
+        s.load(mission).left.value shouldBe ItemMismatch(shelfPos, Item.Computer, Item.Table)
 
-      "signal that the storage position is already occupied" in:
-        val wh = warehouse
-          .withTile(Position(2, 2))(Tile.Shelf())
-          .withTile(Position(2, 3))(Tile.Shelf())
-        val s = Scenario.in(wh)
-        val s1 = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
-        val s2 = StoredItem(Item(ItemId("I2"), ItemWeight(3)), Position(2, 2))
-        val result =
-          for
-            sc1 <- s.placeItem(s1)
-            sc2 <- sc1.placeItem(s2)
-          yield sc2
-        result.left.value shouldBe PositionOccupied(Position(2, 2))
+      "signal NotLoadingBay when dropping outside a loading bay" in:
+        val s = Scenario.in(warehouseWith(Item.Computer))
+        val mission = Mission.deliver(
+          id = MissionId("M1"),
+          item = Item.Computer,
+          from = shelfPos,
+          to = floorPos,
+          duration = Tick(10)
+        )
+        s.load(mission).left.value shouldBe NotLoadingBay(floorPos)
+
+      "report the first failing action" in:
+        val s = Scenario.in(warehouseWith(Item.Computer))
+        val mission = Mission.deliver(
+          id = MissionId("M1"),
+          item = Item.Computer,
+          from = floorPos,
+          to = floorPos,
+          duration = Tick(10)
+        )
+        s.load(mission).left.value shouldBe NotShelfTile(floorPos)
 
     "change the routing policy" should:
 
@@ -164,10 +190,8 @@ class ScenarioSpec extends UnitTest:
 
     "build an environment" should:
 
-      "produce a complete Environment containing warehouse, robots, missions and stored items" in:
-        val wh = warehouse
-          .withTile(Position(1, 1))(Tile.Floor())
-          .withTile(Position(2, 2))(Tile.Shelf())
+      "produce a complete Environment containing warehouse, robots and missions" in:
+        val wh = warehouse.withTile(Position(1, 1))(Tile.Floor())
         val s = Scenario.in(wh)
         val robotId = RobotId("R1")
         val spawn = Spawn(id = robotId, at = Position(1, 1))
@@ -176,20 +200,14 @@ class ScenarioSpec extends UnitTest:
           destination = Position(1, 1),
           duration = Tick(10)
         )
-        val stored = StoredItem(Item(ItemId("I1"), ItemWeight(5)), Position(2, 2))
 
         val scenario = (for
           sc1 <- s.place(spawn)
           sc2 <- sc1.load(mission)
-          sc3 <- sc2.placeItem(stored)
-        yield sc3).value
+        yield sc2).value
 
         val env = scenario.build
 
         env.warehouse shouldBe wh
         env.missions should contain only mission
         env.placements.map(p => (p.robot.id, p.at)) should contain only (robotId -> Position(1, 1))
-        env.items should contain only stored
-        env.item(ItemId("I1")).value shouldBe stored
-        env.itemsAt(Position(2, 2)) should contain only stored
-        env.itemsAt(Position(1, 1)) shouldBe empty

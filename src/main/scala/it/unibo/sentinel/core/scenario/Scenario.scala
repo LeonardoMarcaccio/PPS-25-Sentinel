@@ -1,9 +1,9 @@
 package it.unibo.sentinel.core.scenario
 
-import it.unibo.sentinel.core.warehouse.{Warehouse, Position}
+import it.unibo.sentinel.core.item.Item
+import it.unibo.sentinel.core.mission.{Action, Mission, MissionId}
 import it.unibo.sentinel.core.robot.{Robot, RobotId}
-import it.unibo.sentinel.core.mission.{Mission, MissionId}
-import it.unibo.sentinel.core.item.{ItemId, StoredItem}
+import it.unibo.sentinel.core.warehouse.{Position, Tile, Warehouse}
 import it.unibo.sentinel.core.scenario.Policies.Routing
 import it.unibo.sentinel.core.scenario.Policies.Assignment
 import it.unibo.sentinel.core.simulation.Environment
@@ -75,15 +75,28 @@ enum Validation:
     */
   case MissionAlreadyExists(id: MissionId)
 
-  /** @param id
-    *   the [[ItemId]] of the [[Item]] that already exists.
+  /** @param position
+    *   the [[Position]] that is not a shelf tile.
+    *   Returned when a mission containing a pick operation targets a tile
+    *   that is not a [[Shelf]].
     */
-  case ItemAlreadyExists(id: ItemId)
+  case NotShelfTile(position: Position)
 
   /** @param position
-    *   the [[Position]] that is not a storage tile.
+    *   the [[Position]] that is not a loading zone tile.
+    *   Returned when a mission containing a drop operation targets a tile
+    *   that is not a [[LoadingBay]].
     */
-  case NotStorageTile(position: Position)
+  case NotLoadingBay(position: Position)
+
+  /** @param position
+    *   the [[Position]] where the shelf does not contain the expected item.
+    * @param expected
+    *   the [[Item]] requested by the [[Action.PickUp]].
+    * @param found
+    *   the [[Item]] actually stored on the [[Tile.Shelf]].
+    */
+  case ItemMismatch(position: Position, expected: Item, found: Item)
 
 /** Represents the dynamic context of the environment to simulate.
   */
@@ -155,11 +168,6 @@ trait Scenario:
     */
   def missions: Seq[Mission]
 
-  /** @return
-    *   the [[StoredItem]]s of the [[Scenario]].
-    */
-  def items: Seq[StoredItem]
-
   /** @param spawn
     *   the [[Spawn]] to place in the [[Scenario]].
     * @return
@@ -175,14 +183,6 @@ trait Scenario:
     *   valid, or a [[Validation]] error otherwise.
     */
   def load(mission: Mission): Either[Validation, Scenario]
-
-  /** @param storedItem
-    *   the [[StoredItem]] to place in the [[Scenario]].
-    * @return
-    *   an [[Either]] containing the updated [[Scenario]] if the placement is
-    *   valid, or a [[Validation]] error otherwise.
-    */
-  def placeItem(storedItem: StoredItem): Either[Validation, Scenario]
 
   /** Builds and initializes the simulation [[Environment]] from this
     * [[Scenario]].
@@ -207,7 +207,6 @@ object Scenario:
       warehouse,
       Seq.empty,
       Seq.empty,
-      Seq.empty,
       Routing.Distance,
       Assignment.Nearest,
       CollisionSelection.Random,
@@ -218,7 +217,6 @@ object Scenario:
       warehouse: Warehouse,
       spawns: Seq[Spawn],
       missions: Seq[Mission],
-      items: Seq[StoredItem],
       routing: Policies.Routing,
       assignment: Policies.Assignment,
       collisionSelection: Policies.CollisionSelection,
@@ -229,8 +227,7 @@ object Scenario:
       Environment(
         warehouse = warehouse,
         fleet = ListMap(spawns.map(s => s.id -> s.toPlacement)*),
-        board = ListMap(missions.map(m => m.id -> m)*),
-        stock = ListMap(items.map(si => si.item.id -> si)*)
+        board = ListMap(missions.map(m => m.id -> m)*)
       )
 
     override def place(spawn: Spawn): Either[Validation, Scenario] =
@@ -250,27 +247,30 @@ object Scenario:
       yield copy(spawns = spawns :+ spawn)
 
     override def load(mission: Mission): Either[Validation, Scenario] =
-      for _ <- ensure(
+      for
+        _ <- ensure(
           !missions.exists(_.id == mission.id),
           MissionAlreadyExists(mission.id)
         )
+        _ <- checkTask(mission)
       yield copy(missions = missions :+ mission)
 
-    override def placeItem(storedItem: StoredItem): Either[Validation, Scenario] =
-      for
-        _ <- ensure(
-          warehouse.canStore(storedItem.at),
-          NotStorageTile(storedItem.at)
-        )
-        _ <- ensure(
-          !items.exists(_.item.id == storedItem.item.id),
-          ItemAlreadyExists(storedItem.item.id)
-        )
-        _ <- ensure(
-          !items.exists(_.at == storedItem.at),
-          PositionOccupied(storedItem.at)
-        )
-      yield copy(items = items :+ storedItem)
+    private def checkTask(mission: Mission): Either[Validation, Unit] =
+      mission.task.actions
+        .flatMap(checkAction)
+        .nextOption()
+        .toLeft(())
+
+    private def checkAction(action: Action): Option[Validation] = action match
+      case Action.PickUp(target, at) =>
+        warehouse.tileAt(at).collect { case Tile.Shelf(stored) => stored } match
+          case Some(stored) if stored == target => None
+          case Some(stored)                     => Some(ItemMismatch(at, target, stored))
+          case None                             => Some(NotShelfTile(at))
+      case Action.Drop(_, at) if !warehouse.isLoadingBay(at) =>
+        Some(NotLoadingBay(at))
+      case _ =>
+        None
 
     override def withRouting(routing: Routing): Scenario =
       copy(routing = routing)

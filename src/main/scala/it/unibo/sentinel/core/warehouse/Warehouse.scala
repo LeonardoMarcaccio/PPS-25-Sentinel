@@ -81,17 +81,22 @@ trait Warehouse:
   def isTraversable(position: Position): Boolean =
     tileAt(position) match
       case Some(_: Tile.Walkable) => true
+      case _                      => false
+
+  def isInteractable(position: Position): Boolean =
+    tileAt(position) match
+      case Some(_: Tile.Interactable) => true
+      case _                          => false
+
+  def isShelf(position: Position): Boolean =
+    tileAt(position) match
+      case Some(Tile.Shelf(_)) => true
       case _                   => false
 
-  /** @param position
-    *   the position to check.
-    * @return
-    *   whether [[position]] is a storage.
-    */
-  def canStore(position: Position): Boolean =
+  def isLoadingBay(position: Position): Boolean =
     tileAt(position) match
-      case Some(_: Tile.Storage) => true
-      case _                   => false
+      case Some(Tile.LoadingBay(_)) => true
+      case _                        => false
 
   /** @param position
     *   the position of the tile to retrieve.
@@ -109,8 +114,17 @@ trait Warehouse:
   def traversalCost(position: Position): Option[Tick] =
     tileAt(position) match
       case Some(tile: Tile.Walkable) => Some(tile.cost)
-      case _                      => None
+      case _                         => None
 
+  def interactionPoints(position: Position): Seq[Position] =
+    tileAt(position) match
+      case Some(tile: Tile.Interactable) =>
+        tile
+        .interactiveOffset
+        .map(offset => position + offset)
+        .filter(interactionPoint => isTraversable(interactionPoint) && inBound(interactionPoint))
+      case _                             => Seq.empty
+      
   /** @param position
     *   the position of the tile to add.
     * @param tile

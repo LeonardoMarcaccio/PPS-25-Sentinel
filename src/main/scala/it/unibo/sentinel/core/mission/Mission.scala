@@ -3,6 +3,7 @@ package it.unibo.sentinel.core.mission
 import it.unibo.sentinel.core.robot.RobotId
 import it.unibo.sentinel.core.warehouse.Position
 import it.unibo.sentinel.core.simulation.Tick
+import it.unibo.sentinel.core.item.Item
 
 /** Domain context entity representing a mission within the Sentinel system.
   *
@@ -157,3 +158,6 @@ object Mission:
     */
   def relocate(id: MissionId, destination: Position, duration: Tick): Mission =
     Mission(id, Task.move(destination), duration)
+
+  def deliver(id: MissionId, item: Item, from: Position, to: Position, duration: Tick): Mission =
+    Mission(id, Task.pickAndDrop(item, from, to), duration)

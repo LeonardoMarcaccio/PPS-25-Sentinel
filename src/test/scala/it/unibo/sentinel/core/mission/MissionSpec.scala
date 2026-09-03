@@ -1,6 +1,7 @@
 package it.unibo.sentinel.core.mission
 
 import it.unibo.sentinel.UnitTest
+import it.unibo.sentinel.core.item.Item
 import it.unibo.sentinel.core.robot.RobotId
 import it.unibo.sentinel.core.simulation.Tick
 import it.unibo.sentinel.core.warehouse.Position
@@ -148,3 +149,34 @@ class MissionSpec extends UnitTest:
       "not decrease duration or change action if already Over" in:
         completedMission.tick shouldBe completedMission
         failedMission.tick shouldBe failedMission
+
+    "a deliver mission" should:
+      val from: Position = Position(2, 2)
+      val bay: Position = Position(3, 3)
+      def pendingDeliver: Mission =
+        Mission.deliver(missionID, Item.Computer, from, bay, duration)
+
+      "build a pickAndDrop task starting with PickUp" in:
+        pendingDeliver.task shouldBe Task.pickAndDrop(Item.Computer, from, bay)
+        pendingDeliver.task.actions.toSeq should contain inOrderOnly (
+          Action.PickUp(Item.Computer, from),
+          Action.Drop(Item.Computer, bay)
+        )
+        pendingDeliver.currentAction shouldBe Some(Action.PickUp(Item.Computer, from))
+        pendingDeliver.currentTarget shouldBe Some(from)
+        pendingDeliver.isPending shouldBe true
+
+      "advance from pick to drop, then complete" in:
+        val assigned = pendingDeliver.assignTo(robotID)
+        val afterPick = assigned.completeCurrentAction
+        afterPick.task shouldBe Task.drop(Item.Computer, bay)
+        afterPick.currentAction shouldBe Some(Action.Drop(Item.Computer, bay))
+        afterPick.currentTarget shouldBe Some(bay)
+        afterPick.status shouldBe MissionStatus.Assigned
+        afterPick.carrier shouldBe Some(robotID)
+
+        val done = afterPick.completeCurrentAction
+        done.task shouldBe Task.Done
+        done.status shouldBe MissionStatus.Completed
+        done.isOver shouldBe true
+        done.carrier shouldBe None
