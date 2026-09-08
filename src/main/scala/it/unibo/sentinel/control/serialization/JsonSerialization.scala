@@ -63,8 +63,10 @@ object JsonSerialization:
   given ReadWriter[Routing.Time.type] = macroRW
   given ReadWriter[Routing] = macroRW
   given ReadWriter[Assignment.Nearest.type] = macroRW
+  given ReadWriter[Assignment.Cycle.type] = macroRW
+  given assignmentRandom: ReadWriter[Assignment.Random.type] = macroRW
   given ReadWriter[Assignment] = macroRW
-  given ReadWriter[CollisionSelection.Random.type] = macroRW
+  given collisionRandom: ReadWriter[CollisionSelection.Random.type] = macroRW
   given ReadWriter[CollisionSelection.Deadline.type] = macroRW
   given ReadWriter[CollisionSelection.Priority.type] = macroRW
   given ReadWriter[CollisionSelection] = macroRW

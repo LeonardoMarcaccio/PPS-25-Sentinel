@@ -2,9 +2,9 @@ package it.unibo.sentinel.core.assignment
 
 import it.unibo.sentinel.UnitTest
 import it.unibo.sentinel.core.mission.*
-import it.unibo.sentinel.core.warehouse.Position
 import it.unibo.sentinel.core.scenario.Placement
 import it.unibo.sentinel.core.simulation.Tick
+import it.unibo.sentinel.core.warehouse.Position
 
 class CycleSelectorSpec extends UnitTest with SelectorBehaviors:
 

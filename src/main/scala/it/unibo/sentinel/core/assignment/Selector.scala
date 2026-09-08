@@ -91,7 +91,7 @@ object Selector:
           .map(path => candidate -> path.positions.size)
       reachable.minByOption(_._2).map(_._1)
 
-  /** A stateful selection strategy that cycles through available candidate
+  /** A stateful selection strategy that cycles through available candidate.
     */
   final case class CycleSelector() extends Selector:
     private var cycle = Vector.empty[Placement]
@@ -117,3 +117,29 @@ object Selector:
       do cycle = cycle.filterNot(_ == p) :+ p
 
       selected
+
+  /** A random selection strategy that assigns the mission to a uniformly chosen
+    * available candidate.
+    *
+    * @param seed
+    *   The seed for the internal RNG.
+    */
+  final case class RandomSelector(seed: Long = System.nanoTime())
+      extends Selector:
+    private val random = new scala.util.Random(seed)
+
+    /** @param mission
+      *   The mission to be assigned (ignored, selection is random).
+      * @param available
+      *   The pre-filtered collection of available candidate placements.
+      * @return
+      *   [[Some]] chosen [[Placement]], or [[None]] if no candidates are
+      *   available.
+      */
+    override protected def selectFromAvailable(
+        mission: Mission,
+        available: Iterable[Placement]
+    ): Option[Placement] =
+      val candidates = available.toVector
+      if candidates.isEmpty then None
+      else candidates.lift(random.nextInt(candidates.size))

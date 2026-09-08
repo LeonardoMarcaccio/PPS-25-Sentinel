@@ -35,11 +35,21 @@ object Policies:
       */
     case Nearest
 
+    /** Round-robin assignment cycling through candidates.
+      */
+    case Cycle
+
+    /** Random assignment.
+      */
+    case Random
+
     /** @return
       *   the [[Selector]] for the given [[Assignment]] policy.
       */
     def apply()(using nav: Navigator): Selector = this match
       case Nearest => Selector.Nearest(nav)
+      case Cycle   => Selector.CycleSelector()
+      case Random  => Selector.RandomSelector()
 
   enum CollisionSelection:
 
