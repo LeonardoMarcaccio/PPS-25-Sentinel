@@ -88,9 +88,9 @@ object Simulation:
   ): Simulation =
     given Warehouse = scenario.warehouse
     given Navigator = scenario.routing()
-    given Selector = scenario.assignment()
+    given Selector = scenario.assignment(scenario.seed)
     given SelectionPolicy =
-      scenario.collisionSelection()(using scenario.missions)
+      scenario.collisionSelection(scenario.seed)(using scenario.missions)
     given CollisionHandler = scenario.collisionAvoidance()
     fromWorld(scenario.build)
 

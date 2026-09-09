@@ -43,13 +43,15 @@ object Policies:
       */
     case Random
 
-    /** @return
+    /** @param seed
+      *   the seed governing random choices.
+      * @return
       *   the [[Selector]] for the given [[Assignment]] policy.
       */
-    def apply()(using nav: Navigator): Selector = this match
+    def apply(seed: Long)(using nav: Navigator): Selector = this match
       case Nearest => Selector.Nearest(nav)
       case Cycle   => Selector.CycleSelector()
-      case Random  => Selector.RandomSelector()
+      case Random  => Selector.RandomSelector(seed)
 
   enum CollisionSelection:
 
@@ -57,9 +59,16 @@ object Policies:
     case Deadline
     case Priority
 
-    def apply()(using missionSupplier: => Seq[Mission]): SelectionPolicy =
+    /** @param seed
+      *   the seed governing random choices.
+      * @return
+      *   the [[SelectionPolicy]] for the given policy.
+      */
+    def apply(seed: Long)(using
+        missionSupplier: => Seq[Mission]
+    ): SelectionPolicy =
       this match
-        case Random   => SelectionPolicy.random()
+        case Random   => SelectionPolicy.random(seed)
         case Deadline => SelectionPolicy.closestDeadline()
         case Priority => SelectionPolicy.highestPriority()
 

@@ -38,7 +38,7 @@ class SelectionPolicySpec extends UnitTest with SelectionPolicyFixture:
     given Seq[Mission] = missions
 
     "selecting randomly" should:
-      val policy = SelectionPolicy.random()
+      val policy = SelectionPolicy.random(42L)
 
       "select random robots from a given list" in:
         policy.select(robots) shouldBe defined

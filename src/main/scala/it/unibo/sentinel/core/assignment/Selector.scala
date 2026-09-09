@@ -124,8 +124,7 @@ object Selector:
     * @param seed
     *   The seed for the internal RNG.
     */
-  final case class RandomSelector(seed: Long = System.nanoTime())
-      extends Selector:
+  final case class RandomSelector(seed: Long) extends Selector:
     private val random = new scala.util.Random(seed)
 
     /** @param mission

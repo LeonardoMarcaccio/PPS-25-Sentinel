@@ -12,7 +12,7 @@ import it.unibo.sentinel.core.simulation.Tick
 trait CollisionHandlerFixture extends CollisionCheckerFixture:
   self: UnitTest =>
 
-  given policy: SelectionPolicy = SelectionPolicy.random()
+  given policy: SelectionPolicy = SelectionPolicy.random(42L)
   val pausing: CollisionHandler = CollisionHandler.pausing()
   (group1 ++ group2).zipWithIndex.foreach { (robot, idx) =>
     robot.accept(
