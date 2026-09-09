@@ -58,7 +58,7 @@ object ScenarioConverter:
         schema: ScenarioSchema
     ): Either[Validation, Scenario] =
       repo.load(schema.warehouseId).map { warehouse =>
-        var scenario = Scenario.in(warehouse, schema.seed)
+        var scenario = Scenario.in(warehouse).withSeed(schema.seed)
         scenario = loadValues[Spawn, SpawnSchema](scenario, schema.spawns) {
           (s, spawn) => s.place(spawn)
         }

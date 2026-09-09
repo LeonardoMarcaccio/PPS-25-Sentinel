@@ -6,6 +6,7 @@ import it.unibo.sentinel.core.assignment.Selector
 import it.unibo.sentinel.core.collisions.SelectionPolicy
 import it.unibo.sentinel.core.collisions.CollisionHandler
 import it.unibo.sentinel.core.mission.Mission
+import scala.util.Random
 
 /** Represents the policies that govern the behavior of the simulation.
   */
@@ -43,15 +44,15 @@ object Policies:
       */
     case Random
 
-    /** @param seed
-      *   the seed governing random choices.
+    /** @param rng
+      *   the random generator governing random choices.
       * @return
       *   the [[Selector]] for the given [[Assignment]] policy.
       */
-    def apply(seed: Long)(using nav: Navigator): Selector = this match
+    def apply(rng: Random)(using nav: Navigator): Selector = this match
       case Nearest => Selector.Nearest(nav)
       case Cycle   => Selector.CycleSelector()
-      case Random  => Selector.RandomSelector(seed)
+      case Random  => Selector.RandomSelector(rng)
 
   enum CollisionSelection:
 
@@ -59,16 +60,16 @@ object Policies:
     case Deadline
     case Priority
 
-    /** @param seed
-      *   the seed governing random choices.
+    /** @param rng
+      *   the random generator governing random choices.
       * @return
       *   the [[SelectionPolicy]] for the given policy.
       */
-    def apply(seed: Long)(using
+    def apply(rng: Random)(using
         missionSupplier: => Seq[Mission]
     ): SelectionPolicy =
       this match
-        case Random   => SelectionPolicy.random(seed)
+        case Random   => SelectionPolicy.random(rng)
         case Deadline => SelectionPolicy.closestDeadline()
         case Priority => SelectionPolicy.highestPriority()
 

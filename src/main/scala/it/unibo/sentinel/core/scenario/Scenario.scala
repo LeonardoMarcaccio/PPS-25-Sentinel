@@ -247,17 +247,14 @@ object Scenario:
 
   /** @param warehouse
     *   the [[Warehouse]] the [[Scenario]] refers to.
-    * @param seed
-    *   the seed governing all random choices in the [[Scenario]].
     * @return
     *   a new [[Scenario]] with no robots nor missions for the given
     *   [[Warehouse]].
     */
-  def in(warehouse: Warehouse, seed: Long = 42L): Scenario =
+  def in(warehouse: Warehouse): Scenario =
     Blueprint(
       ScenarioId(java.util.UUID.randomUUID().toString),
-      warehouse,
-      seed = seed
+      warehouse
     )
 
   private final case class Blueprint(

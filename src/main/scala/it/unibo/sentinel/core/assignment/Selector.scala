@@ -2,6 +2,7 @@ package it.unibo.sentinel.core.assignment
 
 import it.unibo.sentinel.core.mission.Mission
 import it.unibo.sentinel.core.scenario.Placement
+import scala.util.Random
 
 /** Domain strategy interface for selecting the best suitable candidate
   * placement for a given mission.
@@ -121,11 +122,10 @@ object Selector:
   /** A random selection strategy that assigns the mission to a uniformly chosen
     * available candidate.
     *
-    * @param seed
-    *   The seed for the internal RNG.
+    * @param rng
+    *   The random generator used for the selection.
     */
-  final case class RandomSelector(seed: Long) extends Selector:
-    private val random = new scala.util.Random(seed)
+  final class RandomSelector(rng: Random) extends Selector:
 
     /** @param mission
       *   The mission to be assigned (ignored, selection is random).
@@ -141,4 +141,4 @@ object Selector:
     ): Option[Placement] =
       val candidates = available.toVector
       if candidates.isEmpty then None
-      else candidates.lift(random.nextInt(candidates.size))
+      else candidates.lift(rng.nextInt(candidates.size))

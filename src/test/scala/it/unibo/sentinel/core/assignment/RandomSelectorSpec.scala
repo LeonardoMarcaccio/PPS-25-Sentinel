@@ -5,6 +5,8 @@ import it.unibo.sentinel.core.mission.*
 import it.unibo.sentinel.core.scenario.Placement
 import it.unibo.sentinel.core.simulation.Tick
 import it.unibo.sentinel.core.warehouse.Position
+import org.mockito.Mockito.when
+import scala.util.Random
 
 class RandomSelectorSpec extends UnitTest with SelectorBehaviors:
 
@@ -20,44 +22,29 @@ class RandomSelectorSpec extends UnitTest with SelectorBehaviors:
 
   "A RandomSelector" when:
 
-    behave like commonSelector(Selector.RandomSelector(seed = 42L))
+    behave like commonSelector(Selector.RandomSelector(mock[Random]))
 
     "selecting among available candidates" should:
 
       "always return the only available candidate" in:
         val (p1, _, _) = createCandidates()
-        val selector = Selector.RandomSelector(seed = 42L)
 
-        for _ <- 1 to 10 do
-          selector.choose(mission, Iterable(p1)) shouldBe Some(p1)
+        val rng = mock[Random]
+        when(rng.nextInt(1)).thenReturn(0)
 
-      "always return a candidate among the available ones" in:
+        val selector = Selector.RandomSelector(rng)
+
+        selector.choose(mission, Iterable(p1)) shouldBe Some(p1)
+
+      "return exactly the candidate at the index extracted by the random generator" in:
         val (p1, p2, p3) = createCandidates()
         val candidates = Vector(p1, p2, p3)
-        val selector = Selector.RandomSelector(seed = 42L)
 
-        for _ <- 1 to 20 do
-          selector.choose(mission, candidates).value shouldBe a[Placement]
-        for _ <- 1 to 20 do
-          candidates should contain(selector.choose(mission, candidates).value)
+        for drawnIndex <- candidates.indices do
+          val rng = mock[Random]
+          when(rng.nextInt(candidates.size)).thenReturn(drawnIndex)
 
-      "be deterministic given the same seed" in:
-        val (p1, p2, p3) = createCandidates()
-        val candidates = Iterable(p1, p2, p3)
-        val first = Selector.RandomSelector(seed = 123L)
-        val second = Selector.RandomSelector(seed = 123L)
-
-        val firstRun = Vector.fill(10)(first.choose(mission, candidates))
-        val secondRun = Vector.fill(10)(second.choose(mission, candidates))
-
-        firstRun shouldBe secondRun
-
-      "match the draw of scala.util.Random for the given seed" in:
-        val (p1, p2, p3) = createCandidates()
-        val candidates = Vector(p1, p2, p3)
-        val seed = 7L
-        val expected =
-          candidates(new scala.util.Random(seed).nextInt(candidates.size))
-        val selector = Selector.RandomSelector(seed = seed)
-
-        selector.choose(mission, candidates) shouldBe Some(expected)
+          val selector = Selector.RandomSelector(rng)
+          selector.choose(mission, candidates) shouldBe Some(
+            candidates(drawnIndex)
+          )

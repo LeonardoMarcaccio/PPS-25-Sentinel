@@ -8,11 +8,12 @@ import it.unibo.sentinel.core.warehouse.Position
 import it.unibo.sentinel.core.mission.Mission
 import it.unibo.sentinel.core.mission.Priority
 import it.unibo.sentinel.core.simulation.Tick
+import scala.util.Random
 
 trait CollisionHandlerFixture extends CollisionCheckerFixture:
   self: UnitTest =>
 
-  given policy: SelectionPolicy = SelectionPolicy.random(42L)
+  given policy: SelectionPolicy = SelectionPolicy.random(new Random(42L))
   val pausing: CollisionHandler = CollisionHandler.pausing()
   (group1 ++ group2).zipWithIndex.foreach { (robot, idx) =>
     robot.accept(

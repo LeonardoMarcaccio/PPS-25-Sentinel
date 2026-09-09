@@ -20,12 +20,12 @@ object SelectionPolicy:
 
   /** Policy that selects the [[Robot]](s) randomly
     *
-    * @param seed
-    *   the seed for the internal RNG.
+    * @param rng
+    *   the random generator used for the selection.
     */
-  def random(seed: Long): SelectionPolicy = robots =>
+  def random(rng: Random): SelectionPolicy = robots =>
     val ids = robots.map(_.id)
-    new Random(seed).shuffle(ids).headOption
+    rng.shuffle(ids).headOption
 
   /** Policy that selects the [[Robot]](s) based on who has the mission closest
     * to failing.
