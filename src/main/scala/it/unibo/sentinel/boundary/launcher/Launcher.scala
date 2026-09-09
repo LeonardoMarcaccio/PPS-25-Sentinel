@@ -21,7 +21,7 @@ object Launcher:
   private val toolkit: Toolkit = FxToolkit
 
   def main(args: Array[String]): Unit =
-    for loaded <- loadScenario()
+    for loaded <- loadScenario("rerouting-demo")
     yield
       val id = SimulationId("sim-1")
       val sim = Simulation.of(id, loaded)
@@ -37,7 +37,7 @@ object Launcher:
         window.show(statistics)
       engine.start()
 
-  def loadScenario(): Either[Validation, Scenario] =
+  def loadScenario(fileName: String): Either[Validation, Scenario] =
     import it.unibo.sentinel.control.serialization.JsonSerialization.given
     import it.unibo.sentinel.control.serialization.FileRepository
     given warehouseRepo: FileRepository[Warehouse] =
@@ -46,4 +46,4 @@ object Launcher:
       new FileRepository[Scenario]
     warehouseRepo.save(Dataset.warehouse)
     scenarioRepo.save(Dataset.scenario)
-    scenarioRepo.load(s"${Dataset.scenario.id}.json")
+    scenarioRepo.load(s"$fileName.json")

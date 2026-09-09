@@ -76,6 +76,8 @@ object Policies:
   enum CollisionAvoidance:
 
     case Wait
+    case Reroute
 
-    def apply(): CollisionHandler = this match
-      case Wait => CollisionHandler.pausing()
+    def apply()(using navigator: Navigator): CollisionHandler = this match
+      case Wait    => CollisionHandler.pause()
+      case Reroute => CollisionHandler.reroute()
