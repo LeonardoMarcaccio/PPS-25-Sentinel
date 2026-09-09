@@ -70,6 +70,13 @@ class SelectionPolicySpec
 
         SelectionPolicy.random(rng).select(robots) shouldBe Some(ids(2))
 
+      "return the only id when a single robot is given" in:
+        val id = robots(0).id
+        val rng = mock[Random]
+        rigged(rng, Seq(id), Seq(id))
+
+        SelectionPolicy.random(rng).select(robots.take(1)) shouldBe Some(id)
+
     "selecting based on mission deadline" should:
       val policy = SelectionPolicy.closestDeadline()
 
