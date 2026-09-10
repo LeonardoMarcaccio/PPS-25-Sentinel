@@ -10,7 +10,7 @@ import it.unibo.sentinel.core.simulation.Tick
 import it.unibo.sentinel.core.warehouse.Position
 import scala.util.Random
 
-class LeastLoadedSpec extends UnitTest with SelectorBehaviors:
+class LeastWorkloadSpec extends UnitTest with SelectorBehaviors:
 
   private val mission =
     Mission.relocate(MissionId("M01"), Position(0, 0), Tick(10))
@@ -49,10 +49,14 @@ class LeastLoadedSpec extends UnitTest with SelectorBehaviors:
 
         selector
           .choose(mission, Iterable(p2, p1))
-          .map(_.robot.id) shouldBe Some(RobotId("R1"))
+          .value
+          .robot
+          .id shouldBe RobotId("R1")
         selector
           .choose(mission, Iterable(p1, p2))
-          .map(_.robot.id) shouldBe Some(RobotId("R1"))
+          .value
+          .robot
+          .id shouldBe RobotId("R1")
 
       "ignore busy candidates even if their workload is lower" in:
         val busy = Placement(
@@ -75,18 +79,24 @@ class LeastLoadedSpec extends UnitTest with SelectorBehaviors:
 
         selector
           .choose(mission, Iterable(p1, p2))
-          .map(_.robot.id) shouldBe Some(RobotId("R1"))
+          .value
+          .robot
+          .id shouldBe RobotId("R1")
 
         r2.accept(Mission.relocate(MissionId("MA"), Position(9, 9), Tick(10)))
         selector
           .choose(mission, Iterable(p1, p2))
-          .map(_.robot.id) shouldBe Some(RobotId("R1"))
+          .value
+          .robot
+          .id shouldBe RobotId("R1")
 
         r1.accept(Mission.relocate(MissionId("MB"), Position(9, 9), Tick(10)))
         r1.accept(Mission.relocate(MissionId("MC"), Position(9, 9), Tick(10)))
         selector
           .choose(mission, Iterable(p1, p2))
-          .map(_.robot.id) shouldBe Some(RobotId("R2"))
+          .value
+          .robot
+          .id shouldBe RobotId("R2")
 
     "resolving a policy" should:
 
