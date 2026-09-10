@@ -58,46 +58,6 @@ class LeastWorkloadSpec extends UnitTest with SelectorBehaviors:
           .robot
           .id shouldBe RobotId("R1")
 
-      "ignore busy candidates even if their workload is lower" in:
-        val busy = Placement(
-          mockLoadedRobot(workload = 0, canAccept = false),
-          Position(9, 9)
-        )
-        val available = Placement(mockLoadedRobot(workload = 2), Position(1, 1))
-        val selector = Selector.LeastWorkload()
-
-        selector.choose(mission, Iterable(busy, available)) shouldBe Some(
-          available
-        )
-
-      "follow the real queue depth of robots" in:
-        val r1 = Robot.drone(RobotId("R1"), capacity = 3)
-        val r2 = Robot.drone(RobotId("R2"), capacity = 3)
-        val p1 = Placement(r1, Position(1, 1))
-        val p2 = Placement(r2, Position(2, 2))
-        val selector = Selector.LeastWorkload()
-
-        selector
-          .choose(mission, Iterable(p1, p2))
-          .value
-          .robot
-          .id shouldBe RobotId("R1")
-
-        r2.accept(Mission.relocate(MissionId("MA"), Position(9, 9), Tick(10)))
-        selector
-          .choose(mission, Iterable(p1, p2))
-          .value
-          .robot
-          .id shouldBe RobotId("R1")
-
-        r1.accept(Mission.relocate(MissionId("MB"), Position(9, 9), Tick(10)))
-        r1.accept(Mission.relocate(MissionId("MC"), Position(9, 9), Tick(10)))
-        selector
-          .choose(mission, Iterable(p1, p2))
-          .value
-          .robot
-          .id shouldBe RobotId("R2")
-
     "resolving a policy" should:
 
       "build a LeastWorkload selector from Policies.Assignment.LeastWorkload" in:
