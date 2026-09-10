@@ -3,7 +3,7 @@ package it.unibo.sentinel.core.assignment
 import org.mockito.Mockito.when
 import it.unibo.sentinel.UnitTest
 import it.unibo.sentinel.core.mission.*
-import it.unibo.sentinel.core.robot.{Robot, RobotId}
+import it.unibo.sentinel.core.robot.{Robot, RobotId, Workload}
 import it.unibo.sentinel.core.routing.Navigator
 import it.unibo.sentinel.core.scenario.{Placement, Policies}
 import it.unibo.sentinel.core.simulation.Tick
@@ -17,7 +17,7 @@ class LeastWorkloadSpec extends UnitTest with SelectorBehaviors:
 
   private def mockLoadedRobot(workload: Int, canAccept: Boolean = true): Robot =
     val robot = mockRobot(canAccept)
-    when(robot.workload).thenReturn(workload)
+    when(robot.workload).thenReturn(Workload(workload))
     robot
 
   "A LeastWorkload selector" when:
