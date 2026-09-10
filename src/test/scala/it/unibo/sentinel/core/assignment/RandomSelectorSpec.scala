@@ -2,7 +2,8 @@ package it.unibo.sentinel.core.assignment
 
 import it.unibo.sentinel.UnitTest
 import it.unibo.sentinel.core.mission.*
-import it.unibo.sentinel.core.scenario.Placement
+import it.unibo.sentinel.core.routing.Navigator
+import it.unibo.sentinel.core.scenario.{Placement, Policies}
 import it.unibo.sentinel.core.simulation.Tick
 import it.unibo.sentinel.core.warehouse.Position
 import org.mockito.Mockito.when
@@ -48,3 +49,11 @@ class RandomSelectorSpec extends UnitTest with SelectorBehaviors:
           selector.choose(mission, candidates) shouldBe Some(
             candidates(drawnIndex)
           )
+
+    "resolving a policy" should:
+
+      "build a RandomSelector from Policies.Assignment.Random" in:
+        given Navigator = mock[Navigator]
+        val policy: Policies.Assignment = Policies.Assignment.Random
+
+        policy(new Random(0)) shouldBe a[Selector.RandomSelector]

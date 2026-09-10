@@ -1,6 +1,7 @@
 package it.unibo.sentinel.core.assignment
 
 import it.unibo.sentinel.core.mission.Mission
+import it.unibo.sentinel.core.robot.value
 import it.unibo.sentinel.core.scenario.Placement
 import scala.util.Random
 
@@ -118,6 +119,25 @@ object Selector:
       do cycle = cycle.filterNot(_ == p) :+ p
 
       selected
+
+  /** A workload-based selection strategy that assigns the mission to the
+    * available candidate with the fewest assigned missions.
+    */
+  final case class LeastWorkload() extends Selector:
+
+    /** @param mission
+      *   The mission to be assigned.
+      * @param available
+      *   The pre-filtered collection of available candidate placements.
+      * @return
+      *   [[Some]] candidate [[Placement]] with the lowest workload, or [[None]]
+      *   if no candidates are available.
+      */
+    override protected def selectFromAvailable(
+        mission: Mission,
+        available: Iterable[Placement]
+    ): Option[Placement] =
+      available.minByOption(p => (p.robot.workload, p.robot.id.value))
 
   /** A random selection strategy that assigns the mission to a uniformly chosen
     * available candidate.

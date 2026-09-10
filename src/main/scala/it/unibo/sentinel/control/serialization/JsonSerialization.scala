@@ -64,6 +64,7 @@ object JsonSerialization:
   given ReadWriter[Routing] = macroRW
   given ReadWriter[Assignment.Nearest.type] = macroRW
   given ReadWriter[Assignment.Cycle.type] = macroRW
+  given ReadWriter[Assignment.LeastWorkload.type] = macroRW
   given assignmentRandom: ReadWriter[Assignment.Random.type] = macroRW
   given ReadWriter[Assignment] = macroRW
   given collisionRandom: ReadWriter[CollisionSelection.Random.type] = macroRW
