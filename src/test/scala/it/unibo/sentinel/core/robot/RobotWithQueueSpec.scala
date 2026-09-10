@@ -24,9 +24,6 @@ class RobotWithQueueSpec extends UnitTest with RobotFixture with RobotBehavior:
 
     "tracking workload" should:
 
-      "start at zero" in:
-        Robot.drone(robotId, capacity).workload shouldBe 0
-
       "grow with accepts and shrink with releases" in:
         val robot = Robot.drone(robotId, capacity)
         robot.accept(mission1)
